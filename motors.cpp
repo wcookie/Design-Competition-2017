@@ -1,32 +1,36 @@
 #include "motors.h"
 
-int APIN1; //Front left
-int DPIN1;
-int APIN2; //Front right
-int DPIN2;
-int APIN3; //Back left
-int DPIN3;
-int APIN4; //Back right
-int DPIN4;
+int frontLeftA; //Front left
+int frontLeftD;
+int frontRightA; //Front right
+int frontRightD;
+int backLeftA; //Back left
+int backLeftD;
+int backRightA; //Back right
+int backRightD;
 
-void initMotors(int pin1, int pin2, int pin3, int pin4){
-    softPwmCreate(pin1, 0, 100);
-    softPwmCreate(pin2, 0, 100);
-    softPwmCreate(pin3, 0, 100);
-    softPwmCreate(pin4, 0, 100);
-    APIN1 = pin1;
-    APIN2 = pin2;
-    APIN3 = pin3;
-    APIN4 = pin4;
+void initMotors(){
+    softPwmCreate(frontLeftA, 0, 100);
+    softPwmCreate(frontRightA, 0, 100);
+    softPwmCreate(backLeftA, 0, 100);
+    softPwmCreate(backRightA, 0, 100);
+    pinMode(frontLeftD, OUTPUT);
+    pinMode(frontRightD, OUTPUT);
+    pinMode(backLeftD, OUTPUT);
+    pinMode(backRightD, OUTPUT);
 }
 
 
 void moveForward(int speed, bool direction){
     // all go at speed speed
-    softPwmWrite(PIN1, speed);
-    softPwmWrite(PIN2, speed);
-    softPwmWrite(PIN3, speed);
-    softPwmWrite(PIN4, speed);
+    softPwmWrite(frontLeftA, speed);
+    softPwmWrite(frontRightA, speed);
+    softPwmWrite(backLeftA, speed);
+    softPwmWrite(backRightA, speed);
+    digitalWrite(frontLeftD, HIGH);
+    digitalWrite(frontRightD, HIGH);
+    digitalWrite(backLeftD, HIGH);
+    digitalWrite(backRightD, HIGH);
 }
 
 void turnLeft(int speed, int steepness){

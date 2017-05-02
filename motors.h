@@ -1,7 +1,7 @@
 #include <wiringPi.h>
 #include <softPwm.h>
 
-void initMotors(int pin1, int pin2, int pin3, int pin4);
+void initMotors();
 
 
 //Speed between 0 and 100 (seems like everything between 0 and 100)
