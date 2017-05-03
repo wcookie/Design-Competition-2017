@@ -44,6 +44,8 @@ void setup() {
 void loop() {
 
   // call stuff in here
+  // also if the directions are wrong, you can switch which wire goes to which out pin from the 
+  // h bridge for that motor
   moveMotors(100, true, 100, true);
   delay(50000);
 
