@@ -26,15 +26,17 @@ int mode2 = 26;
 // values to adjust //
 //////////////////////
 
-float speedPercentage = 100;
+float speedPercentage = 20;
 
-int frontLeftVoltage  = int(2.55*speedPercentage*1);
-int backLeftVoltage   = int(2.55*speedPercentage*1);
+int frontLeftVoltage  = int(2.55*speedPercentage*.96);
+int backLeftVoltage   = int(2.55*speedPercentage*.98);
 int frontRightVoltage = int(2.55*speedPercentage*1);
-int backRightVoltage   = int(2.55*speedPercentage*1);
+int backRightVoltage   = int(2.55*speedPercentage*.94);
 
 int tc = 2000;    // time constant, number of milliseconds it takes to move forward one unit
-int tcr = 10;   // time constant for rotation, milliseconds to turn one degree 
+int tcr = 540;   // time constant for right turn, milliseconds to turn 90 degrees right
+int tcl = 540;   // time constant for right left, milliseconds to turn 90 degrees right
+
 
 //eventualy make initMotors() function
 //left and right speeds between 0 and 255
@@ -85,7 +87,7 @@ void backward(int units){
   
 }
 
-void turnRight(int deg){
+void turnRight(){
   analogWrite(frontLeftA, frontLeftVoltage);
   analogWrite(backLeftA, backLeftVoltage);
 
@@ -97,11 +99,11 @@ void turnRight(int deg){
   digitalWrite(frontRightD, false);
   digitalWrite(backRightD, false);
 
-  delay(tc*deg);
+  delay(tcr);
   
 }
 
-void turnLeft(int deg){
+void turnLeft(){
   analogWrite(frontLeftA, frontLeftVoltage);
   analogWrite(backLeftA, backLeftVoltage);
 
@@ -113,7 +115,7 @@ void turnLeft(int deg){
   digitalWrite(frontRightD, true);
   digitalWrite(backRightD, true);
 
-  delay(tc*deg);
+  delay(tcl);
   
 }
 
@@ -154,6 +156,6 @@ void loop() {
 
   // call stuff in here
 forward(1);
-  wait(1000);
+  wait(3000);
 
 }
