@@ -23,7 +23,6 @@ typedef struct {
 volatile viveSensor V1;
 unsigned long prevTime = 0;
 int state = 0;
-double xPos, yPos;
 double xOld = 0, yOld = 0, xFilt = 0, yFilt = 0;
 
 
@@ -61,7 +60,7 @@ void ltdSetup(){
 
   attachInterrupt(digitalPinToInterrupt(V1PIN), ISRV1, CHANGE);
 }
-void getEnemyPosition(float &xPos, float&yPos){  
+void getEnemyPosition(double &xPos, double &yPos){  
    char msg[20];
    char msg_index = 0;
    if (Serial3.available() > 0) {
@@ -114,11 +113,11 @@ void motorSetup() {
 
 
 
-void findPosition(float &xOld, &yOld, &xFilt, &yFilt){
+void findPosition(double &xOld, double &yOld, double &xFilt, double &yFilt){
       V1.useMe = 0;
 
-      xPos = tan((V1.vertAng - 90.0) * DEG_TO_RAD) * LIGHTHOUSEHEIGHT;
-      yPos = tan((V1.horzAng - 90.0) * DEG_TO_RAD) * LIGHTHOUSEHEIGHT;
+      double xPos = tan((V1.vertAng - 90.0) * DEG_TO_RAD) * LIGHTHOUSEHEIGHT;
+      double yPos = tan((V1.horzAng - 90.0) * DEG_TO_RAD) * LIGHTHOUSEHEIGHT;
 
       xFilt = xOld * 0.8 + xPos * 0.2;
       yFilt = yOld * 0.8 + yPos * 0.2;
@@ -142,7 +141,13 @@ void loop() {
   // call stuff in here
   // also if the directions are wrong, you can switch which wire goes to which out pin from the 
   // h bridge for that motor
-  moveMotors(100, true, 100, true);
+    moveMotors(100, true, 100, true);
+    if (micros() - prevTime > 1000000 / 25) {
+    if (V1.useMe == 1) {
+      prevTime = micros();
+      findPosition(xOld, yOld, xFilt, yFilt);
+    }
+    }
   
 
 }
