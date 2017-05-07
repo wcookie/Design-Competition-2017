@@ -24,6 +24,7 @@ volatile viveSensor V1;
 unsigned long prevTime = 0;
 int state = 0;
 double xOld = 0, yOld = 0, xFilt = 0, yFilt = 0;
+double enemyX, enemyY;
 
 
 bool grid[XROW][YROW]; // true means that there's obstacle, false otherwise.
@@ -148,6 +149,8 @@ void loop() {
       findPosition(xOld, yOld, xFilt, yFilt);
     }
     }
+    getEnemyPosition(enemyX, enemyY);
+    
   
 
 }
