@@ -12,12 +12,12 @@
 #define LIGHTHOUSEHEIGHT 6.0
 
 typedef struct {
-  unsigned long changeTime[3];
+  unsigned long changeTime[11];
   int prevPulse;
   double horzAng;
   double vertAng;
   int useMe;
-  int firstTime;
+  int collected;
 } viveSensor;
 
 volatile viveSensor V1;
@@ -26,6 +26,8 @@ int state = 0;
 double xOld = 0, yOld = 0, xFilt = 0, yFilt = 0;
 double enemyX, enemyY;
 
+char msg[100];
+char msg_index = 0;
 
 bool grid[XROW][YROW]; // true means that there's obstacle, false otherwise.
 
@@ -44,7 +46,6 @@ int frontRightD = 10;
 int backRightA = 16;
 int backRightD = 17;
 
-
 //Setup the serial for the xbee
 void xbeeSetup(){
   Serial3.begin(9600);
@@ -57,13 +58,12 @@ void ltdSetup(){
   V1.horzAng = 0;
   V1.vertAng = 0;
   V1.useMe = 0;
-  V1.firstTime = 1;
-
+  V1.collected = 0;
   attachInterrupt(digitalPinToInterrupt(V1PIN), ISRV1, CHANGE);
 }
 void getEnemyPosition(double &xPos, double &yPos){  
-   char msg[20];
-   char msg_index = 0;
+  
+
    if (Serial3.available() > 0) {
    msg[msg_index] = Serial3.read();
    //Serial.print(msg[msg_index]);
@@ -120,8 +120,8 @@ void findPosition(double &xOld, double &yOld, double &xFilt, double &yFilt){
       double xPos = tan((V1.vertAng - 90.0) * DEG_TO_RAD) * LIGHTHOUSEHEIGHT;
       double yPos = tan((V1.horzAng - 90.0) * DEG_TO_RAD) * LIGHTHOUSEHEIGHT;
 
-      xFilt = xOld * 0.8 + xPos * 0.2;
-      yFilt = yOld * 0.8 + yPos * 0.2;
+      xFilt = xOld * 0.5 + xPos * 0.5;
+      yFilt = yOld * 0.5 + yPos * 0.5;
 
       xOld = xFilt;
       yOld = yFilt;
@@ -151,36 +151,31 @@ void loop() {
     }
     getEnemyPosition(enemyX, enemyY);
     
+    
   
 
 }
-
 void ISRV1() {
-  int val = digitalReadFast(V1PIN);
-  int pulseTime;
+  // get the time the interrupt occured
+  unsigned long mic = micros();
+  int i;
 
-  V1.changeTime[0] = V1.changeTime[1];
-  V1.changeTime[1] = V1.changeTime[2];
-  V1.changeTime[2] = micros();
+  // shift the time into the buffer
+  for (i = 0; i < 10; i++) {
+    V1.changeTime[i] = V1.changeTime[i + 1];
+  }
+  V1.changeTime[10] = mic;
 
-  if (val == 1) {
-    pulseTime = V1.changeTime[2] - V1.changeTime[1];
-    if (pulseTime < 50) {
-      if (V1.firstTime == 1) {
-        V1.prevPulse = pulseTime;
-        V1.firstTime = 0;
-      }
-      else {
-        if (pulseTime < V1.prevPulse) {
-          V1.horzAng = (V1.changeTime[1] - V1.changeTime[0]) * DEG_PER_US;
-        }
-        else {
-          V1.vertAng = (V1.changeTime[1] - V1.changeTime[0]) * DEG_PER_US;
-        }
-        V1.prevPulse = pulseTime;
-        V1.useMe = 1;
-      }
+  // if the buffer is full
+  if (V1.collected < 11) {
+    V1.collected++;
+  }
+  else {
+    // if the times match the waveform pattern
+    if ((V1.changeTime[1] - V1.changeTime[0] > 7000) && (V1.changeTime[3] - V1.changeTime[2] > 7000) && (V1.changeTime[6] - V1.changeTime[5] < 50) && (V1.changeTime[10] - V1.changeTime[9] < 50)) {
+      V1.horzAng = (V1.changeTime[5] - V1.changeTime[4]) * DEG_PER_US;
+      V1.vertAng = (V1.changeTime[9] - V1.changeTime[8]) * DEG_PER_US;
+      V1.useMe = 1;
     }
   }
 }
-
