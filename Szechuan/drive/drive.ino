@@ -3,8 +3,8 @@
 #include <avr/interrupt.h>
 
 
-#define XROW 1000
-#define YROW 1000
+#define XROW 9
+#define YROW 9
 
 #define V1PIN 24
 #define DEG_PER_US 0.0216 // (180 deg) / (8333 us)
@@ -53,7 +53,7 @@ void xbeeSetup(){
 
 //setup the light to digital sensor(s?)
 void ltdSetup(){
-   pinMode(V1PIN, INPUT);
+  pinMode(V1PIN, INPUT);
   V1.prevPulse = 0;
   V1.horzAng = 0;
   V1.vertAng = 0;
@@ -61,6 +61,25 @@ void ltdSetup(){
   V1.collected = 0;
   attachInterrupt(digitalPinToInterrupt(V1PIN), ISRV1, CHANGE);
 }
+
+void gridSetup(){
+  short x = 0;
+  short y;
+  for (x; x < 9; ++x){
+    for (y= 0; y < 9; ++y){
+      if ((x % 2) == 0 || (y%2) == 0){
+        // basically every other x has nothing in it, including the two sides.
+        // if it's not that, every other y has something in it (except the two sides)
+        grid[x][y] = false;
+      }
+      else {
+        grid[x][y] = true;
+      }
+    }
+  }
+}
+
+
 void getEnemyPosition(double &xPos, double &yPos){  
   
 
