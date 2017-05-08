@@ -73,6 +73,7 @@ void ltdSetup(){
   attachInterrupt(digitalPinToInterrupt(V1PIN), ISRV1, CHANGE);
 }
 
+// reallly don't think this is necessary to have an array anyways since basically the crieteria is if x and y is both odd.
 void gridSetup(){
   short x = 0;
   short y;
@@ -159,6 +160,7 @@ void motorSetup() {
 
 
 
+
 void findPosition(double &xOld, double &yOld, double &xFilt, double &yFilt){
       V1.useMe = 0;
 
@@ -172,6 +174,25 @@ void findPosition(double &xOld, double &yOld, double &xFilt, double &yFilt){
       yOld = yFilt;
 }
 
+//true meaning this grid position would have the potential for eyesight between our robot and the enemies
+//takes only rid positions
+bool hasEyeSight(short goalX, short goalY, short baddieX, short baddieY){
+  //horizontal
+  if ((goalX == baddieX) && (goalX % 2 == 0)){
+    return true;
+  }
+
+  //vertical
+  if ((goalY == baddieY) && (goalY % 2 == 0)){
+    return true;
+  }
+  
+  //diagonal
+   if (abs(baddieY - goalY) == abs(baddieX - goalX)){
+    return true;
+   }
+   return false;
+}
 
 void setup(){
   Serial.begin(9600);
