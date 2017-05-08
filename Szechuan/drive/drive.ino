@@ -37,9 +37,9 @@ bool grid[XROW][YROW]; // true means that there's obstacle, false otherwise.
 //Back right is 0, 8.
 //Front left is 8, 0
 //Front right is 8,8
-double x0;
+double xInit;
 double xMax;
-double y0;
+double yInit;
 double yMax;
 
 //these pin #s were chosen randomly.  These are for h bridge stuff,
@@ -114,17 +114,17 @@ void getEnemyPosition(double &xPos, double &yPos){
 
 
 void posToGrid(short &xCoord, short &yCoord){ 
-  double xPercent = (xFilt - x0) / (xMax - x0);
+  double xPercent = (xFilt - xInit) / (xMax - xInit);
   xCoord = round(xPercent * 8.0);
-  double yPercent = (yFilt - y0) / (yMax - y0);
+  double yPercent = (yFilt - yInit) / (yMax - yInit);
   yCoord = round(yPercent * 8.0);
 }
 
 void gridToPos(short xCoord, short yCoord, double &xExact, double &yExact){
-  double xDiff = xMax - x0;
-  double yDiff = yMax - y0;
-  xExact = x0 + xDiff * (double) xCoord / 8.0;
-  yExact = y0 + yDiff * (double) yCoord / 8.0;
+  double xDiff = xMax - xInit;
+  double yDiff = yMax - yInit;
+  xExact = xInit + xDiff * (double) xCoord / 8.0;
+  yExact = yInit + yDiff * (double) yCoord / 8.0;
 }
 
 //read X and Y seperated by space.
