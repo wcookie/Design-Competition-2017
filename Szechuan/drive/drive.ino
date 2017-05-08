@@ -194,6 +194,14 @@ bool hasEyeSight(short goalX, short goalY, short baddieX, short baddieY){
    return false;
 }
 
+// calculating grid distance
+double distanceFunc(short goalX, short goalY, short baddieX, short baddieY){
+  short xDiff = baddieX - goalX;
+  short yDiff = baddieY - goalY;
+  return sqrt((xDiff * Xdiff) + (yDiff * yDiff));
+}
+
+
 void setup(){
   Serial.begin(9600);
   motorSetup();
