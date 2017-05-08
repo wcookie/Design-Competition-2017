@@ -8,7 +8,6 @@
 
 #define V1PIN 24
 #define DEG_PER_US 0.0216 // (180 deg) / (8333 us)
-#define DEG_TO_RAD 3.14/180.0
 #define LIGHTHOUSEHEIGHT 6.0
 
 typedef struct {
