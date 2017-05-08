@@ -10,6 +10,9 @@
 #define DEG_PER_US 0.0216 // (180 deg) / (8333 us)
 #define LIGHTHOUSEHEIGHT 6.0
 
+#define DISTANCE_WEIGHT 5.0
+#define EYESIGHT_WEIGHT 10.0
+
 typedef struct {
   unsigned long changeTime[11];
   int prevPulse;
@@ -201,6 +204,14 @@ double distanceFunc(short goalX, short goalY, short baddieX, short baddieY){
   return sqrt((xDiff * Xdiff) + (yDiff * yDiff));
 }
 
+// overall goodness of function, using the weights above. 
+//consider changing the baddie x and y to just be using the enemy x and y or something
+// may not be necessary tho, only needs to happen once anyways
+// we want the lowest thing possible
+// basic idea is distance goodness - eyesight badness
+double desirability(short goalX, short goalY, short baddieX, short baddieY){
+  return DISTANCE_WEIGHT * distanceFunc(goalX, goalY, baddieX, baddieY) - EYESIGHT_WEIGHT * (double) hasEyesight(goalX, goalY, baddieX, baddieY);
+}
 
 void setup(){
   Serial.begin(9600);
