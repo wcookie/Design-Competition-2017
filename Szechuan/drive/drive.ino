@@ -20,6 +20,7 @@ typedef struct {
   int collected;
 } viveSensor;
 
+
 volatile viveSensor V1;
 unsigned long prevTime = 0;
 int state = 0;
@@ -118,6 +119,13 @@ void posToGrid(short &xCoord, short &yCoord){
   xCoord = round(xPercent * 8.0);
   double yPercent = (yFilt - y0) / (yMax - y0);
   yCoord = round(yPercent * 8.0);
+}
+
+void gridToPos(short xCoord, short yCoord, double &xExact, double &yExact){
+  double xDiff = xMax - x0;
+  double yDiff = yMax - y0;
+  xExact = x0 + xDiff * (double) xCoord / 8.0;
+  yExact = y0 + yDiff * (double) yCoord / 8.0;
 }
 
 //read X and Y seperated by space.
