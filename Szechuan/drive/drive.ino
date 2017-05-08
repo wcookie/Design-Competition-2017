@@ -31,6 +31,17 @@ char msg_index = 0;
 
 bool grid[XROW][YROW]; // true means that there's obstacle, false otherwise.
 
+
+// Four corner positions.  
+//Back left is 0,0.  
+//Back right is 0, 8.
+//Front left is 8, 0
+//Front right is 8,8
+double x0;
+double xMax;
+double y0;
+double yMax;
+
 //these pin #s were chosen randomly.  These are for h bridge stuff,
 // make sure the A pins are actually PWM pins from teensy lc pinout
 // Make sure that the d pins are preferably normal pins that don't have anlaog in
@@ -101,6 +112,14 @@ void getEnemyPosition(double &xPos, double &yPos){
 
 }
 
+
+void posToGrid(short &xCoord, short &yCoord){ 
+  double xPercent = (xFilt - x0) / (xMax - x0);
+  xCoord = round(xPercent * 8.0);
+  double yPercent = (yFilt - y0) / (yMax - y0);
+  yCoord = round(yPercent * 8.0);
+}
+
 //read X and Y seperated by space.
 
 //eventualy make initMotors() function
@@ -152,6 +171,7 @@ void setup(){
   motorSetup();
   xbeeSetup();
   ltdSetup();
+  gridSetup();
 }
 
 
