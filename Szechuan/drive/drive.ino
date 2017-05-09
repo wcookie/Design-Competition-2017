@@ -32,9 +32,6 @@ double enemyX, enemyY;
 char msg[100];
 char msg_index = 0;
 
-bool grid[XROW][YROW]; // true means that there's obstacle, false otherwise.
-
-
 // Four corner positions.  
 //Back left is 0,0.  
 //Back right is 0, 8.
@@ -76,23 +73,7 @@ void ltdSetup(){
   attachInterrupt(digitalPinToInterrupt(V1PIN), ISRV1, CHANGE);
 }
 
-// reallly don't think this is necessary to have an array anyways since basically the crieteria is if x and y is both odd.
-void gridSetup(){
-  short x = 0;
-  short y;
-  for (x; x < 9; ++x){
-    for (y= 0; y < 9; ++y){
-      if ((x % 2) == 0 || (y%2) == 0){
-        // basically every other x has nothing in it, including the two sides.
-        // if it's not that, every other y has something in it (except the two sides)
-        grid[x][y] = false;
-      }
-      else {
-        grid[x][y] = true;
-      }
-    }
-  }
-}
+
 
 
 void getEnemyPosition(double &xPos, double &yPos){  
@@ -249,7 +230,6 @@ void setup(){
   motorSetup();
   xbeeSetup();
   ltdSetup();
-  gridSetup();
 }
 
 
