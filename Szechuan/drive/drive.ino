@@ -211,6 +211,8 @@ double distanceFunc(short goalX, short goalY, short baddieX, short baddieY){
 // may not be necessary tho, only needs to happen once anyways
 // we want the lowest thing possible
 // basic idea is distance goodness - eyesight badness
+// may / PROBABLY want to take into account where we currently are -- 
+// f.e. if there is a slightly better spot really far away from us than one very close, probably worth just going to the one close.
 double desirability(short goalX, short goalY, short baddieX, short baddieY){
   //this is function that should definitely be talked about more and changed.
   return DISTANCE_WEIGHT * distanceFunc(goalX, goalY, baddieX, baddieY) - EYESIGHT_WEIGHT * (double) hasEyesight(goalX, goalY, baddieX, baddieY);
