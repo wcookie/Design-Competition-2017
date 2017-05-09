@@ -203,7 +203,7 @@ bool hasEyeSight(short goalX, short goalY, short baddieX, short baddieY){
 double distanceFunc(short goalX, short goalY, short baddieX, short baddieY){
   short xDiff = baddieX - goalX;
   short yDiff = baddieY - goalY;
-  return sqrt((xDiff * Xdiff) + (yDiff * yDiff));
+  return sqrt((xDiff * xDiff) + (yDiff * yDiff));
 }
 
 // overall goodness of function, using the weights above. 
@@ -215,7 +215,7 @@ double distanceFunc(short goalX, short goalY, short baddieX, short baddieY){
 // f.e. if there is a slightly better spot really far away from us than one very close, probably worth just going to the one close.
 double desirability(short goalX, short goalY, short baddieX, short baddieY){
   //this is function that should definitely be talked about more and changed.
-  return DISTANCE_WEIGHT * distanceFunc(goalX, goalY, baddieX, baddieY) - EYESIGHT_WEIGHT * (double) hasEyesight(goalX, goalY, baddieX, baddieY);
+  return DISTANCE_WEIGHT * distanceFunc(goalX, goalY, baddieX, baddieY) - EYESIGHT_WEIGHT * (double) hasEyeSight(goalX, goalY, baddieX, baddieY);
 }
 
 
@@ -225,7 +225,7 @@ void bestCoords(short &decidedX, short &decidedY, short baddieX, short baddieY){
   short yCounter;
   double temp;
   for (xCounter; xCounter < 9; ++xCounter){
-    for (yCounter = 0; yCointer < 9; ++yCounter){
+    for (yCounter = 0; yCounter < 9; ++yCounter){
       // if one of the two is even, we're not in an obstacle
       if ((xCounter % 2 == 0) || (yCounter % 2 == 0)){
         temp = desirability(xCounter, yCounter, baddieX, baddieY);
