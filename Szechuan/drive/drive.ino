@@ -179,6 +179,8 @@ void findPosition(double &xOld, double &yOld, double &xFilt, double &yFilt){
 
 //true meaning this grid position would have the potential for eyesight between our robot and the enemies
 //takes only rid positions
+
+//also may want to change this to a double s.t. we talk about how much eyesight we have
 bool hasEyeSight(short goalX, short goalY, short baddieX, short baddieY){
   //horizontal
   if ((goalX == baddieX) && (goalX % 2 == 0)){
@@ -210,8 +212,35 @@ double distanceFunc(short goalX, short goalY, short baddieX, short baddieY){
 // we want the lowest thing possible
 // basic idea is distance goodness - eyesight badness
 double desirability(short goalX, short goalY, short baddieX, short baddieY){
+  //this is function that should definitely be talked about more and changed.
   return DISTANCE_WEIGHT * distanceFunc(goalX, goalY, baddieX, baddieY) - EYESIGHT_WEIGHT * (double) hasEyesight(goalX, goalY, baddieX, baddieY);
 }
+
+
+void bestCoords(short &decidedX, short &decidedY, short baddieX, short baddieY){
+  double bestDistance = 10000;
+  short xCounter = 0;
+  short yCounter;
+  double temp;
+  for (xCounter; xCounter < 9; ++xCounter){
+    for (yCounter = 0; yCointer < 9; ++yCounter){
+      // if one of the two is even, we're not in an obstacle
+      if ((xCounter % 2 == 0) || (yCounter % 2 == 0)){
+        temp = desirability(xCounter, yCounter, baddieX, baddieY);
+        // now if this is a more desirable position:
+        if (temp < bestDistance){
+          // set the pass by reference vals to be the current best.
+          decidedX = xCounter;
+          decidedY = yCounter;
+          // update the current best
+          bestDistance = temp;
+        }
+      }
+    }
+  }
+}
+
+
 
 void setup(){
   Serial.begin(9600);
