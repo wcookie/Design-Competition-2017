@@ -97,7 +97,7 @@ void getEnemyPosition(double &xPos, double &yPos){
 
 }
 
-
+// should take it so it has arguments
 void posToGrid(short &xCoord, short &yCoord){ 
   double xPercent = (xFilt - xInit) / (xMax - xInit);
   xCoord = round(xPercent * 8.0);
