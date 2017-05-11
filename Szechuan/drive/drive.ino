@@ -7,6 +7,7 @@
 #define YROW 9
 
 #define V1PIN 4
+#define V2PIN 5 // the signal from the sensor
 #define DEG_PER_US 0.0216 // (180 deg) / (8333 us)
 #define LIGHTHOUSEHEIGHT 6.0
 
@@ -24,10 +25,15 @@ typedef struct {
 
 
 volatile viveSensor V1;
+volatile viveSensor V2;
 unsigned long prevTime = 0;
+unsigned long prevTime2 = 0;
 int state = 0;
+double xCombo = 0, yCombo = 0;
 double xOld = 0, yOld = 0, xFilt = 0, yFilt = 0;
 double enemyX, enemyY;
+double xOld2 = 0, yOld2 = 0, xFilt2 = 0, yFilt2 = 0;
+double xOld3 = 0, yOld3 = 0, xFilt3 = 0, yFilt3 = 0;
 
 short ourLastX;
 short ourlastY;
@@ -76,6 +82,15 @@ void ltdSetup(){
   V1.useMe = 0;
   V1.collected = 0;
   attachInterrupt(digitalPinToInterrupt(V1PIN), ISRV1, CHANGE);
+  pinMode(V2PIN, INPUT); // to read the sensor
+  // initialize the sensor variables
+  V2.horzAng = 0;
+  V2.vertAng = 0;
+  V2.useMe = 0;
+  V2.collected = 0;
+  // interrupt on any sensor change
+  attachInterrupt(digitalPinToInterrupt(V2PIN), ISRV2, CHANGE);
+  
 }
 
 
@@ -256,6 +271,14 @@ void loop() {
       findPosition(xOld, yOld, xFilt, yFilt);
     }
     }
+    if (micros() - prevTime2 > 1000000 / 25){
+      if (V2.useMe == 1){
+        prevTime2 = micros();
+        findPosition(xOld2, yOld2, xFilt2, yFilt2);
+    }
+    }
+
+    
     getEnemyPosition(enemyX, enemyY);
 
     Serial.print("Xfilt: \t");
@@ -263,6 +286,12 @@ void loop() {
     Serial.print("\t");
     Serial.print("Yfilt: \t");
     Serial.print(yFilt);
+    Serial.print("\r\n");
+    Serial.print("Xfilt2: \t");
+    Serial.print(xFilt2);
+    Serial.print("\t");
+    Serial.print("Yfilt2: \t");
+    Serial.print(yFilt2);
     Serial.print("\r\n");
     Serial.print("Enemy xPos: \t");
     Serial.print(enemyX);
@@ -299,3 +328,32 @@ void ISRV1() {
     }
   }
 }
+
+
+// the sensor interrupt
+void ISRV2() {
+  // get the time the interrupt occured
+  unsigned long mic = micros();
+  int i;
+
+  // shift the time into the buffer
+  for (i = 0; i < 10; i++) {
+    V2.changeTime[i] = V2.changeTime[i + 1];
+  }
+  V2.changeTime[10] = mic;
+
+  // if the buffer is full
+  if (V2.collected < 11) {
+    V2.collected++;
+  }
+  else {
+    // if the times match the waveform pattern
+    if ((V2.changeTime[1] - V2.changeTime[0] > 7000) && (V2.changeTime[3] - V2.changeTime[2] > 7000) && (V2.changeTime[6] - V2.changeTime[5] < 50) && (V2.changeTime[10] - V2.changeTime[9] < 50)) {
+      V2.horzAng = (V2.changeTime[5] - V2.changeTime[4]) * DEG_PER_US;
+      V2.vertAng = (V2.changeTime[9] - V2.changeTime[8]) * DEG_PER_US;
+      V2.useMe = 1;
+    }
+  }
+}
+
+
