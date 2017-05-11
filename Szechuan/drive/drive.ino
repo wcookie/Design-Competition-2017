@@ -7,7 +7,8 @@
 #define YROW 9
 
 #define V1PIN 4
-#define V2PIN 5 // the signal from the sensor
+#define V2PIN 3 // the signal from the sensor
+#define V3Pin 2
 #define DEG_PER_US 0.0216 // (180 deg) / (8333 us)
 #define LIGHTHOUSEHEIGHT 6.0
 
@@ -165,11 +166,34 @@ void motorSetup() {
 
 
 
-void findPosition(double &xOld, double &yOld, double &xFilt, double &yFilt){
-      V1.useMe = 0;
+void findPosition(double &xOld, double &yOld, double &xFilt, double &yFilt, short num){
+      double xPos = 0;
+      double yPos = 0;
+      /*Serial.print("Num: \t");
+      Serial.print(num);
+      Serial.print("\r\n");*/
+      if (num == 1){
+        V1.useMe = 0;
+        xPos = tan((V1.vertAng - 90.0) * DEG_TO_RAD) * LIGHTHOUSEHEIGHT;
+        yPos = tan((V1.horzAng - 90.0) * DEG_TO_RAD) * LIGHTHOUSEHEIGHT;
+      }
+      else if (num == 2){
+        V2.useMe = 0;
+        xPos = tan((V2.vertAng - 90.0) * DEG_TO_RAD) * LIGHTHOUSEHEIGHT;
+        yPos = tan((V2.horzAng - 90.0) * DEG_TO_RAD) * LIGHTHOUSEHEIGHT; 
+      }
+      else if (num == 3){
+        //v3.useMe = 0;
+        //xPos = tan((V3.vertAng - 90.0) * DEG_TO_RAD) * LIGHTHOUSEHEIGHT;
+        //yPos = tan((V3.horzAng - 90.0) * DEG_TO_RAD) * LIGHTHOUSEHEIGHT; 
+      }
+      else if (num == 4){
+       //v4.useMe = 0;
+       //xPos = tan((V4.vertAng - 90.0) * DEG_TO_RAD) * LIGHTHOUSEHEIGHT;
+       //yPos = tan((V4.horzAng - 90.0) * DEG_TO_RAD) * LIGHTHOUSEHEIGHT; 
+      }
 
-      double xPos = tan((V1.vertAng - 90.0) * DEG_TO_RAD) * LIGHTHOUSEHEIGHT;
-      double yPos = tan((V1.horzAng - 90.0) * DEG_TO_RAD) * LIGHTHOUSEHEIGHT;
+ 
 
       xFilt = xOld * 0.5 + xPos * 0.5;
       yFilt = yOld * 0.5 + yPos * 0.5;
@@ -268,13 +292,13 @@ void loop() {
     if (micros() - prevTime > 1000000 / 25) {
     if (V1.useMe == 1) {
       prevTime = micros();
-      findPosition(xOld, yOld, xFilt, yFilt);
+      findPosition(xOld, yOld, xFilt, yFilt, 1);
     }
     }
     if (micros() - prevTime2 > 1000000 / 25){
       if (V2.useMe == 1){
         prevTime2 = micros();
-        findPosition(xOld2, yOld2, xFilt2, yFilt2);
+        findPosition(xOld2, yOld2, xFilt2, yFilt2, 2);
     }
     }
 
@@ -299,7 +323,6 @@ void loop() {
     Serial.print("Enemy yPos: \t");
     Serial.print(enemyY);
     Serial.print("\r\n");
-    
     
   
 
