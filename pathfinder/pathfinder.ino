@@ -1,9 +1,5 @@
 #include <StackArray.h>
 #include <QueueArray.h>
-#include <math.h>
-#include <stdio.h>
-
-using namespace std;
 
 #define WALL_COST_WEIGHT 1 //Cost of being next to a Wall (Corners = 2 X WALL_COST_WEIGHT)
 #define EYESIGHT_WEIGHT 1 //Cost of being potentially seen by Enemy
@@ -17,6 +13,8 @@ using namespace std;
 
 #define SENSORXPOS 4 //Position of sensor (full board) if half board val: 1
 #define SENSORYPOS 4 //Position of sensor (full board) if half board val: 4
+
+char buffer[200]; 
 
 //point struct for x and y coord, declare currentLoc and currentEnemyLoc
 struct point {
@@ -45,16 +43,16 @@ bool isOdd(point coord){
 void genInitialPoint(){
   bool genPos = false;
   while (!genPos){
-    currentLoc.xpos = rand()%(XROW);
-    currentLoc.ypos = rand()%(YROW);
+    currentLoc.xpos = (int)random(XROW);
+    currentLoc.ypos = (int)random(YROW);
     if (!isOdd(currentLoc)){
       genPos = true;
     }
   }
   genPos = false;
   while (!genPos){
-    currentEnemyLoc.xpos = rand()%(XROW);
-    currentEnemyLoc.ypos = rand()%(YROW);
+    currentEnemyLoc.xpos = (int)random(XROW);
+    currentEnemyLoc.ypos = (int)random(YROW);
     if (!isOdd(currentEnemyLoc) && (currentEnemyLoc.xpos != currentLoc.xpos && currentEnemyLoc.ypos != currentLoc.ypos)){ //dont want to initialize robots in same place
       genPos = true;
     }
@@ -63,20 +61,23 @@ void genInitialPoint(){
 
 
 //Prints Cost Matrix in nice format with obstacles, enemy position and our position shown
-void printCostMatrix(int** costMatrix){
+void printCostMatrix(int costMatrix[][XROW]){
   for (int h = 0; h < YROW; h++)
   {
     for (int w = 0; w < XROW; w++)
     {
       if (w == currentLoc.xpos && h == currentLoc.ypos)
-        printf("X, "); //X for our robot position
+        Serial.print("X, "); //X for our robot position
       else if (w == currentEnemyLoc.xpos && h == currentEnemyLoc.ypos)
-        printf("E, "); //E for enemy
+        Serial.print("E, "); //E for enemy
       else if (w%2 == 1 && h%2 == 1)
-        printf("C, "); //C for cylinder/cone
-      else printf("%i, ", costMatrix[h][w]);
+        Serial.print("C, "); //C for cylinder/cone
+      else {
+        sprintf(buffer, "%i, ", costMatrix[h][w]);
+        Serial.print (buffer);
+      }
     }
-    printf("\n");
+    Serial.print ("\n");
   }
 }
 
@@ -97,18 +98,21 @@ void print_list(queueNode *traverse)
 {
     if (traverse == 0) return;
     print_list(traverse->prev);
-    printf("Node x: %d and Node y: %d\n", traverse->pt.xpos, traverse->pt.ypos);
+    sprintf(buffer, "Node x: %d and Node y: %d\n", traverse->pt.xpos, traverse->pt.ypos);
+    Serial.print (buffer);
 }
 
 //BFS currently returns min cost of path from src to dest
-StackArray<point> BFS(int** cost, point src, point dest)
+StackArray<point> BFS(int cost[][XROW], point src, point dest)
 {
-    printf("\nInside Finding Min Cost Path\n");
-    printf("Current x: %d and Current y: %d\n", src.xpos, src.ypos);
-    printf("Target x: %d and Target y: %d\n", dest.xpos, dest.ypos);
+    Serial.print ("\nInside Finding Min Cost Path\n");
+    sprintf(buffer, "Current x: %d and Current y: %d\n", src.xpos, src.ypos);
+    Serial.print (buffer);
+    sprintf(buffer, "Target x: %d and Target y: %d\n", dest.xpos, dest.ypos);
+    Serial.print (buffer);
 
     int visited[YROW][XROW];
-    memset(visited, false, sizeof visited);
+    memset(visited, 0, sizeof visited);
 
     // Mark the source cell as visited
     visited[src.ypos][src.xpos] = cost[src.ypos][src.xpos];
@@ -142,15 +146,18 @@ StackArray<point> BFS(int** cost, point src, point dest)
         if (pt.xpos == dest.xpos && pt.ypos == dest.ypos){
 
             int distance = curr->dist;
-            printf("Printing List\n");
+            Serial.print ("Printing List\n");
             StackArray<point> path;
             while (curr != 0){
-              printf("Node x: %d and Node y: %d\n", curr->pt.xpos, curr->pt.ypos);
+              sprintf(buffer, "Node x: %d and Node y: %d\n", curr->pt.xpos, curr->pt.ypos);
+              Serial.print (buffer);
               path.push(curr->pt);
               curr = curr->prev;
             }
-            printf("Total distance of Path: %d\n", distance);
+            sprintf(buffer, "Total distance of Path: %d\n", distance);
+            Serial.print (buffer);
             // print_list(curr);
+            memset(visited, 0, sizeof visited);
             return path;
           }
 
@@ -167,17 +174,23 @@ StackArray<point> BFS(int** cost, point src, point dest)
             // not visited yet, enqueue it.
             if (isValid(row, col) && !visited[row][col])
             {
-                printf("Node x: %d and Node y: %d\n", row, col);
+                memset(buffer, 0, sizeof(buffer));
+                sprintf(buffer, "Node x: %d and Node y: %d\n", row, col);
+                Serial.print (buffer);
                 // mark cell as visited and enqueue it
                 visited[row][col] = curr->dist + cost[row][col];
+//                
 
                 for (int h = 0; h < YROW; h++)
                 {
                   for (int w = 0; w < XROW; w++)
                   {
-                    printf("%d, ", visited[h][w]);
+                    Serial.print (visited[h][w], DEC);
+//                    else Serial.print ("Ass");
+//                    Serial.print (0, 2);
+                    Serial.print("\t");  
                   }
-                  printf("\n");
+                  Serial.print ("\n");
                 }
 
                 point adjpoint = {col, row};
@@ -194,6 +207,7 @@ StackArray<point> BFS(int** cost, point src, point dest)
      //return -1 if destination cannot be reached
      StackArray<point> path;
      path.push(src);
+     memset(visited, 0, sizeof visited);
      return path;
 }
 
@@ -209,8 +223,9 @@ StackArray<point> BFS(int** cost, point src, point dest)
 //  -- Sensor Reach?
 StackArray<point> calcCostMatrix(){
 
-  int** costMatrix = 0;
-  costMatrix = new int*[YROW];
+
+  int costMatrix[YROW][XROW];
+  memset(costMatrix, 0, sizeof costMatrix);
 
   int minCost = 1000;
   float minDistCost = 1000.0;
@@ -220,11 +235,11 @@ StackArray<point> calcCostMatrix(){
 
   for (int y = 0; y < YROW; y++)
   {
-    costMatrix[y] = new int[XROW];
+//    costMatrix[y] = new int[XROW];
     for (int x = 0; x < XROW; x++)
     {
       //initial Value
-      costMatrix[y][x]= 0;
+//      costMatrix[y][x]= 0;
 
       //obstacles - weight == 1000 - really can't go through them - pathing algo goes around anyways (so doesnt matter can remove)
       if (x%2 == 1 && y%2 == 1)
@@ -247,7 +262,7 @@ StackArray<point> calcCostMatrix(){
           costMatrix[y][x] += EYESIGHT_WEIGHT;
 
         //line of sight diagonal
-        if (pow((float)(y-currentEnemyLoc.ypos), 2.0) == pow((float)(x-currentEnemyLoc.xpos), 2.0)
+        if (abs(y-currentEnemyLoc.ypos) == abs(x-currentEnemyLoc.xpos)
           && !(currentEnemyLoc.xpos%2 == 0 && currentEnemyLoc.ypos%2 == 0)){ //if both enemy coord even then diag l.o.s. is blocked
           costMatrix[y][x] += EYESIGHT_WEIGHT;
         }
@@ -290,34 +305,20 @@ StackArray<point> calcCostMatrix(){
   // for (auto v : path)
   //   printf("POINT: xpos: %d ; ypos: %d\n", v.xpos, v.ypos );
 
-  // important: clean up memory
-  printf("\n");
-  printf("Cleaning up cost Array memory...\n");
-  for (int h = 0; h < YROW; h++)
-  {
-    delete [] costMatrix[h];
-  }
-  delete [] costMatrix;
-  costMatrix = 0;
-
-  printf("Returning Best Path.\n");
+  memset(costMatrix, 0, sizeof costMatrix);
   return path;
 }
 
 
 
-int main(int argc, char const *argv[]) {
-  //set rand seed
-//  srand(time(NULL));
-
-  printf("Sup, world!\n");
+int main() {
+  
   genInitialPoint();
-  printf("currentLoc xpos: %d ; currentLoc ypos: %d\n", currentLoc.xpos, currentLoc.ypos);
-  printf("currentEnemyLocation xpos: %d ; currentEnemyLocation ypos: %d\n", currentEnemyLoc.xpos, currentEnemyLoc.ypos);
-
+  sprintf(buffer, "currentLoc xpos: %d ; currentLoc ypos: %d\n", currentLoc.xpos, currentLoc.ypos);
+  Serial.print (buffer);
+  sprintf(buffer, "currentEnemyLocation xpos: %d ; currentEnemyLocation ypos: %d\n", currentEnemyLoc.xpos, currentEnemyLoc.ypos);
+  Serial.print (buffer);
   calcCostMatrix(); //Use calcCostMatrix to get Path that should be taken (list of points)
-
-
 
   return 0;
 }
@@ -326,6 +327,9 @@ int main(int argc, char const *argv[]) {
 
 void setup() {
   // put your setup code here, to run once:
+  Serial.begin(9600);
+  randomSeed(analogRead(0));
+  main();
   
 
 }
