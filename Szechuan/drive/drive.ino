@@ -12,7 +12,7 @@
 
 #define DISTANCE_WEIGHT 5.0
 #define EYESIGHT_WEIGHT 10.0
-
+#define WALL_WEIGHT 1.0
 typedef struct {
   unsigned long changeTime[11];
   int prevPulse;
@@ -28,6 +28,11 @@ unsigned long prevTime = 0;
 int state = 0;
 double xOld = 0, yOld = 0, xFilt = 0, yFilt = 0;
 double enemyX, enemyY;
+
+short ourLastX;
+short ourlastY;
+short theirLastX;
+short theirLastY;
 
 char msg[100];
 char msg_index = 0;
@@ -223,6 +228,10 @@ void bestCoords(short &decidedX, short &decidedY, short baddieX, short baddieY){
   }
 }
 
+// if either we or 
+bool needToRecalc(short ourX, short ourY, short baddieX, short baddieY){
+  
+}
 
 
 void setup(){
