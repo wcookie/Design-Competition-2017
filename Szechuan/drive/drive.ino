@@ -6,7 +6,7 @@
 #define XROW 9
 #define YROW 9
 
-#define V1PIN 24
+#define V1PIN 4
 #define DEG_PER_US 0.0216 // (180 deg) / (8333 us)
 #define LIGHTHOUSEHEIGHT 6.0
 
@@ -52,19 +52,19 @@ double yMax;
 // Make sure that the d pins are preferably normal pins that don't have anlaog in
 // A pins go to the analog input for the h bridge (enable)
 // D pins go t othe digital input for H bridge (phase)
-int frontLeftA = 4;
-int frontLeftD = 9;
-int backLeftA = 6;
-int backLeftD = 11;
+int frontLeftA = 23;
+int frontLeftD = 19;
+int backLeftA = 20;
+int backLeftD = 16;
 
-int frontRightA = 20;
-int frontRightD = 10;
-int backRightA = 16;
+int frontRightA = 22;
+int frontRightD = 18;
+int backRightA = 21;
 int backRightD = 17;
 
 //Setup the serial for the xbee
 void xbeeSetup(){
-  Serial3.begin(9600);
+  Serial2.begin(9600);
 }
 
 //setup the light to digital sensor(s?)
@@ -84,8 +84,8 @@ void ltdSetup(){
 void getEnemyPosition(double &xPos, double &yPos){  
   
 
-   if (Serial3.available() > 0) {
-   msg[msg_index] = Serial3.read();
+   if (Serial2.available() > 0) {
+   msg[msg_index] = Serial2.read();
    //Serial.print(msg[msg_index]);
    if (msg[msg_index] == '\n') {
 
@@ -228,9 +228,10 @@ void bestCoords(short &decidedX, short &decidedY, short baddieX, short baddieY){
   }
 }
 
-// if either we or 
-bool needToRecalc(short ourX, short ourY, short baddieX, short baddieY){
-  
+// if either we or they change pos, do stuff 
+bool needToRecalc(){
+  return false;
+ // if(ourLastX != g
 }
 
 
@@ -248,7 +249,7 @@ void loop() {
   // call stuff in here
   // also if the directions are wrong, you can switch which wire goes to which out pin from the 
   // h bridge for that motor
-    moveMotors(100, true, 100, true);
+    //moveMotors(100, true, 100, true);
     if (micros() - prevTime > 1000000 / 25) {
     if (V1.useMe == 1) {
       prevTime = micros();
@@ -256,6 +257,19 @@ void loop() {
     }
     }
     getEnemyPosition(enemyX, enemyY);
+
+    Serial.print("Xfilt: \t");
+    Serial.print(xFilt);
+    Serial.print("\t");
+    Serial.print("Yfilt: \t");
+    Serial.print(yFilt);
+    Serial.print("\r\n");
+    Serial.print("Enemy xPos: \t");
+    Serial.print(enemyX);
+    Serial.print("\t");
+    Serial.print("Enemy yPos: \t");
+    Serial.print(enemyY);
+    Serial.print("\r\n");
     
     
   
