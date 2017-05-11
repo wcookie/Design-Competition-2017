@@ -1,9 +1,7 @@
-#include <iostream>
+#include <QueueArray.h>
 #include <math.h>
 #include <stdio.h>
 #include <ctime>
-#include <queue>          // std::queue
-#include <list>
 
 using namespace std;
 
@@ -103,7 +101,7 @@ void print_list(queueNode *traverse)
 }
 
 //BFS currently returns min cost of path from src to dest
-list<point> BFS(int** cost, point src, point dest)
+QueueArray<point> BFS(int** cost, point src, point dest)
 {
     printf("\nInside Finding Min Cost Path\n");
     printf("Current x: %d and Current y: %d\n", src.xpos, src.ypos);
@@ -116,7 +114,7 @@ list<point> BFS(int** cost, point src, point dest)
     visited[src.ypos][src.xpos] = cost[src.ypos][src.xpos];
 
     // Create a queue for BFS
-    queue<queueNode*> q;
+    QueueArray <queueNode*> q;
 
     // distance of source cell is 0
     queueNode * s = new queueNode;
@@ -128,14 +126,13 @@ list<point> BFS(int** cost, point src, point dest)
     q.push(s);  // Enqueue source cell
 
 
-    queueNode * curr;
     // These arrays are used to get row and column
     // numbers of 4 neighbours of a given cell
     int rowNum[] = {-1, 0, 0, 1};
     int colNum[] = {0, -1, 1, 0};
 
     // Do a BFS starting from source cell
-    while (!q.empty())
+    while (!q.isEmpty())
     {
         queueNode * curr = q.front();
         point pt = curr->pt;
@@ -146,10 +143,10 @@ list<point> BFS(int** cost, point src, point dest)
 
             int distance = curr->dist;
             printf("Printing List\n");
-            list<point> path;
+            QueueArray<point> path;
             while (curr != 0){
               printf("Node x: %d and Node y: %d\n", curr->pt.xpos, curr->pt.ypos);
-              path.push_front(curr->pt);
+              path.push(curr->pt);
               curr = curr->prev;
             }
             printf("Total distance of Path: %d\n", distance);
@@ -195,8 +192,8 @@ list<point> BFS(int** cost, point src, point dest)
         }
     }
      //return -1 if destination cannot be reached
-     list<point> path;
-     path.push_front(src);
+     QueueArray<point> path;
+     path.push(src);
      return path;
 }
 
@@ -210,7 +207,7 @@ list<point> BFS(int** cost, point src, point dest)
 // Potential:
 //  -- Easyness to get there? Direction?
 //  -- Sensor Reach?
-list<point> calcCostMatrix(){
+QueueArray<point> calcCostMatrix(){
 
   int** costMatrix = 0;
   costMatrix = new int*[YROW];
@@ -262,7 +259,7 @@ list<point> calcCostMatrix(){
 
         //Incease cost if farther from us
         int distToUs = abs(y-currentLoc.ypos)+abs(x-currentLoc.xpos);
-        costMatrix[y][x] += DISTANCE_WEIGHT*(distToUs+1);
+        // costMatrix[y][x] += DISTANCE_WEIGHT*(distToUs+1);
 
         //Update best min cost and target coord, if current cost is less
         if (costMatrix[y][x] < minCost){
@@ -286,7 +283,7 @@ list<point> calcCostMatrix(){
 
   printCostMatrix(costMatrix);
 
-  list<point> path = BFS(costMatrix, currentLoc, target);
+  QueueArray<point> path = BFS(costMatrix, currentLoc, target);
 
   // printf("Path contains: \n");
   //
@@ -311,7 +308,7 @@ list<point> calcCostMatrix(){
 
 int main(int argc, char const *argv[]) {
   //set rand seed
-  srand(time(NULL));
+//  srand(time(NULL));
 
   printf("Sup, world!\n");
   genInitialPoint();
