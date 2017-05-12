@@ -1,5 +1,5 @@
+#include <MemoryFree.h>
 #include <StackArray.h>
-#include <QueueArray.h>
 
 #define WALL_COST_WEIGHT 2 //Cost of being next to a Wall (Corners = 2 X WALL_COST_WEIGHT)
 #define EYESIGHT_WEIGHT 2 //Cost of being potentially seen by Enemy
@@ -20,16 +20,8 @@ char buffer[200];
 struct point {
   int xpos;
   int ypos;
-} currentLoc, currentEnemyLoc;
-
-// An Data Structure for queue used in BFS
-struct queueNode
-{
-    point pt;  // The coordinates of a cell
-    int dist;  // cell's distance of from the source
-    queueNode* prev;
 };
- 
+
 typedef struct {
     int priority;
     point* vertex;
@@ -40,7 +32,8 @@ typedef struct {
     int len;
     int size;
 } heap_t;
- 
+
+
 void pushHeap (heap_t *h, int priority, point* vertex) {
     if (h->len + 1 >= h->size) {
         h->size = h->size ? h->size * 2 : 4;
@@ -112,41 +105,23 @@ bool isOdd(point coord){
   else return false;
 }
 
-//Returns a random starting point for both currentLoc and currentEnemyLoc
-void genInitialPoint(){
-  bool genPos = false;
-  while (!genPos){
-    currentLoc.xpos = (int)random(XROW);
-    currentLoc.ypos = (int)random(YROW);
-    
-//    currentLoc.xpos = 2;
-//    currentLoc.ypos = 7;
-    if (!isOdd(currentLoc)){
-      genPos = true;
-    }
+bool isEven(point coord){
+  if (coord.xpos%2 == 0 && coord.ypos%2 == 0){
+    return true;
   }
-  genPos = false;
-  while (!genPos){
-    currentEnemyLoc.xpos = (int)random(XROW);
-    currentEnemyLoc.ypos = (int)random(YROW);
-//    currentEnemyLoc.xpos = 2;
-//    currentEnemyLoc.ypos = 5;
-    if (!isOdd(currentEnemyLoc) && (currentEnemyLoc.xpos != currentLoc.xpos && currentEnemyLoc.ypos != currentLoc.ypos)){ //dont want to initialize robots in same place
-      genPos = true;
-    }
-  }
+  else return false;
 }
 
 
 //Prints Cost Matrix in nice format with obstacles, enemy position and our position shown
-void printCostMatrix(int costMatrix[][XROW]){
+void printCostMatrix(int costMatrix[][XROW], point robotPos, point enemyPos){
   for (int h = 0; h < YROW; h++)
   {
     for (int w = 0; w < XROW; w++)
     {
-      if (w == currentLoc.xpos && h == currentLoc.ypos)
+      if (w == robotPos.xpos && h == robotPos.ypos)
         Serial.print("X, "); //X for our robot position
-      else if (w == currentEnemyLoc.xpos && h == currentEnemyLoc.ypos)
+      else if (w == enemyPos.xpos && h == enemyPos.ypos)
         Serial.print("E, "); //E for enemy
       else if (w%2 == 1 && h%2 == 1)
         Serial.print("C, "); //C for cylinder/cone
@@ -170,16 +145,81 @@ bool isValid(int row, int col)
            !(row%2 == 1 && col%2 == 1);
 }
 
+StackArray<point> findBestPath(int distanceArray[][XROW], point* prevArray[][XROW], point target){
+
+   for (int h = 0; h < YROW; h++)
+    {
+      for (int w = 0; w < XROW; w++)
+      {
+//        if (h == src.ypos && w == src.xpos) Serial.print("X");
+        if (!(h%2 == 1 && w%2 == 1)){
+          sprintf(buffer, "(%d, %d)", prevArray[h][w]->xpos, prevArray[h][w]->ypos);
+          Serial.print (buffer);
+        }
+        else Serial.print("NA");
+        Serial.print("\t");  
+      }
+      Serial.print ("\n");
+    }
+
+   for (int h = 0; h < YROW; h++)
+    {
+      for (int w = 0; w < XROW; w++)
+      {
+//        if (h == src.ypos && w == src.xpos) Serial.print("X");
+        if (!(h%2 == 1 && w%2 == 1)){
+          Serial.print (distanceArray[h][w], DEC);
+        }
+        else Serial.print("NA");
+        Serial.print("\t");  
+      }
+      Serial.print ("\n");
+    }
+
+    Serial.print ("\nPrinting Path from End to start\n");
+
+    //Target for testing 
+    int tempx = target.xpos;
+    int tempy = target.ypos;
+    
+
+    StackArray<point> path;
+    
+    if (prevArray[tempy][tempx] == 0){
+      point src = {tempx, tempy};
+      path.push(src);
+    }
+    
+    sprintf(buffer, "Total distance of Path: %d\n", distanceArray[tempy][tempx]);
+    Serial.print (buffer);
+    sprintf(buffer, "Target x: %d and y: %d\n",tempx, tempy);
+    Serial.print (buffer);
+
+    int tx; 
+    while (prevArray[tempy][tempx] != 0){
+      sprintf(buffer, "Node x: %d and Node y: %d\n", prevArray[tempy][tempx]->xpos, prevArray[tempy][tempx]->ypos);
+      Serial.print (buffer);
+      
+      point p = {tempx, tempy};
+      path.push(p);
+      
+      tx = tempx;
+      tempx = prevArray[tempy][tempx]->xpos;
+      tempy = prevArray[tempy][tx]->ypos;
+    }
+
+   return path;
+}
+
 
 //Djikstras currently returns min cost of path from src
-StackArray<point> BFS(int cost[][XROW], point src)
+StackArray<point> djikstra(int cost[][XROW], point src, point target)
 {
     Serial.print ("\nInside Finding Min Cost Path\n");
     sprintf(buffer, "Current x: %d and Current y: %d\n", src.xpos, src.ypos);
     Serial.print (buffer);
 //    sprintf(buffer, "Target x: %d and Target y: %d\n", dest.xpos, dest.ypos);
 //    Serial.print (buffer);
-
 
     Serial.print("Creating Priority Queue\n");
     heap_t* Q = new heap_t();
@@ -207,16 +247,6 @@ StackArray<point> BFS(int cost[][XROW], point src)
         else distanceArray[k][l] = -1;
       }
     }
-
-    for (int h = 0; h < YROW; h++)
-    {
-      for (int w = 0; w < XROW; w++)
-      {
-        Serial.print (distanceArray[h][w], DEC);
-        Serial.print("\t");  
-      }
-      Serial.print ("\n");
-    }
     
     int rowNum[] = {-1, 0, 0, 1};
     int colNum[] = {0, -1, 1, 0};
@@ -236,12 +266,9 @@ StackArray<point> BFS(int cost[][XROW], point src)
             // not visited yet, enqueue it.
             if (isValid(row, col))
             {
-//                memset(buffer, 0, sizeof(buffer));
-//                sprintf(buffer, "Neighbor Node x: %d and y: %d\n", row, col);
-//                Serial.print (buffer);
-//
-//                int distToUs = abs(row-src.ypos)+abs(col-src.xpos);
-//                visited[row][col] = (int)((curr->dist + cost[row][col])/distToUs) + distToUs;
+
+//              int distToUs = abs(row-src.ypos)+abs(col-src.xpos);
+//              visited[row][col] = (int)((curr->dist + cost[row][col])/distToUs) + distToUs;
 
                 int alt = distanceArray[u->ypos][u->xpos] + cost[row][col];
                 
@@ -258,48 +285,8 @@ StackArray<point> BFS(int cost[][XROW], point src)
         }
     }
 
-    for (int h = 0; h < YROW; h++)
-    {
-      for (int w = 0; w < XROW; w++)
-      {
-//        Serial.print (distanceArray[h][w], DEC);
-        if (h == src.ypos && w == src.xpos) Serial.print("X");
-        else if (!(h%2 == 1 && w%2 == 1)){
-          sprintf(buffer, "(%d, %d)", prevArray[h][w]->xpos, prevArray[h][w]->ypos);
-          Serial.print (buffer);
-        }
-        else Serial.print("NA");
-        Serial.print("\t");  
-      }
-      Serial.print ("\n");
-    }
-
-
-      
-//      Serial.print ("Printing Path from End to start\n");
-//
-//      //Target for testing 
-//      int tempx = 7;
-//      int tempy = 2;
-//
-//      sprintf(buffer, "Total distance of Path: %d\n", distanceArray[tempy][tempx]);
-//      Serial.print (buffer);
-//      sprintf(buffer, "Node x: %d and Node y: %d\n",tempx, tempy);
-//      Serial.print (buffer);
-//      
-//      while (prevArray[tempy][tempx] != 0){
-//        sprintf(buffer, "Node x: %d and Node y: %d\n", prevArray[tempy][tempx]->xpos, prevArray[tempy][tempx]->ypos);
-//        Serial.print (buffer);
-////        path.push(curr->pt);
-//        tempx = prevArray[tempy][tempx]->xpos;
-//        tempy = prevArray[tempy][tempx]->ypos;
-//      }
-//
-//
-//     //return -1 if destination cannot be reached
-     StackArray<point> path;
-     path.push(src);
-     return path;
+    StackArray<point> path = findBestPath(distanceArray, prevArray, target);
+    return path;
 }
 
 
@@ -312,17 +299,18 @@ StackArray<point> BFS(int cost[][XROW], point src)
 // Potential:
 //  -- Easyness to get there? Direction?
 //  -- Sensor Reach?
-StackArray<point> calcCostMatrix(){
+StackArray<point> calcCostMatrix(point robotPos, point enemyPos){
 
-
-  int costMatrix[YROW][XROW];
+  //int *costMatrix;
+  int* costMatrix[XROW] = malloc(sizeof(int[XROW][XROW]));
+ // int costMatrix[YROW][XROW];
   memset(costMatrix, 0, sizeof costMatrix);
 
   int minCost = 1000;
   int maxEnemyDistance = 0;
   point target;
-  target.xpos = currentLoc.xpos;
-  target.ypos = currentLoc.ypos;
+  target.xpos = robotPos.xpos;
+  target.ypos = robotPos.ypos;
 
   for (int y = 0; y < YROW; y++)
   {
@@ -345,21 +333,21 @@ StackArray<point> calcCostMatrix(){
           costMatrix[y][x] += WALL_COST_WEIGHT;
 
         //line of sight x coord
-        if (currentEnemyLoc.xpos == x && x%2 == 0) //if even then not hidden by obstacles
+        if (enemyPos.xpos == x && x%2 == 0) //if even then not hidden by obstacles
           costMatrix[y][x] += EYESIGHT_WEIGHT;
 
         // line of sight y coord
-        if (currentEnemyLoc.ypos == y && y%2 == 0) //if even then not hidden by obstacles
+        if (enemyPos.ypos == y && y%2 == 0) //if even then not hidden by obstacles
           costMatrix[y][x] += EYESIGHT_WEIGHT;
 
         //line of sight diagonal
-        if (abs(y-currentEnemyLoc.ypos) == abs(x-currentEnemyLoc.xpos)
-          && !(currentEnemyLoc.xpos%2 == 0 && currentEnemyLoc.ypos%2 == 0)){ //if both enemy coord even then diag l.o.s. is blocked
+        if (abs(y-enemyPos.ypos) == abs(x-enemyPos.xpos)
+          && !(enemyPos.xpos%2 == 0 && enemyPos.ypos%2 == 0)){ //if both enemy coord even then diag l.o.s. is blocked
           costMatrix[y][x] += EYESIGHT_WEIGHT;
         }
 
         //Increase cost if closer to enemy
-        int distToEnemy = abs(y-currentEnemyLoc.ypos)+abs(x-currentEnemyLoc.xpos);
+        int distToEnemy = abs(y-enemyPos.ypos)+abs(x-enemyPos.xpos);
         if (distToEnemy < ENEMY_DISTANCE )
           costMatrix[y][x] += (int)(ENEMY_PROXIMITY_WEIGHT/(distToEnemy+1));
 
@@ -387,37 +375,94 @@ StackArray<point> calcCostMatrix(){
     }
   }
 
-  printCostMatrix(costMatrix);
+  printCostMatrix(costMatrix, robotPos, enemyPos);
 
-  StackArray<point> path = BFS(costMatrix, currentLoc);
+  StackArray<point> path = djikstra(costMatrix, robotPos, target);
 
   // printf("Path contains: \n");
   //
   // for (auto v : path)
   //   printf("POINT: xpos: %d ; ypos: %d\n", v.xpos, v.ypos );
 
-  memset(costMatrix, 0, sizeof costMatrix);
+//  memset(costMatrix, 0, sizeof costMatrix);
+  free(costMatrix);
   return path;
 }
+
+int getIndex(point src, point target){
+  if(isEven(src) && isEven(target)){
+    return ((src.xpos/2) + 5 * ((src.ypos/2) + 5 * ((target.xpos/2) + 5 * (target.ypos/2))));
+  }
+  else {
+    Serial.print("\nInvalid points - not Even\n");
+    return 0;
+  }
+}
+
+void preCalculateMatrix(){
+  point* PATHMATRIX[625][2];
+    
+  int index;
+//  point enemyLoc, pos;
+  for (int i = 0; i < YROW; i = i+2){
+    for (int j = 0; j < XROW; j = j+2){
+      for (int k = 0; k < YROW; k = k+2){
+        for (int l = 0; l < XROW; l = l+2){
+//          Serial.print("\nCalculating Matrix\n");
+//          sprintf(buffer, "currentLoc xpos: %d ; currentLoc ypos: %d\n", j, i);
+//          Serial.print (buffer);
+//          sprintf(buffer, "currentEnemyLocation xpos: %d ; currentEnemyLocation ypos: %d\n", l, k);
+//          Serial.print (buffer);
+//          Serial.print(freeRam());
+          Serial.print("freeMemory()=");
+          Serial.println(freeMemory());
+//    
+          point pos = {j, i};
+          point enemyLoc = {l, k};
+          index = getIndex(pos, enemyLoc);
+          StackArray<point> path = calcCostMatrix(pos, enemyLoc); //Use calcCostMatrix to get Path that should be taken (list of points)
+                
+          point top = path.pop();
+//          sprintf(buffer, "Top xpos: %d ; Top ypos: %d\n", top.xpos, top.ypos);
+//          Serial.print (buffer);
+          PATHMATRIX[index][0] = &top;
+    
+          ///Has another direction to Go
+          if (!path.isEmpty()){
+            point secondtop = path.pop();
+//            sprintf(buffer, "secondtop xpos: %d ; secondtop ypos: %d\n", secondtop.xpos, secondtop.ypos);
+//            Serial.print (buffer);
+            PATHMATRIX[index][1] = &secondtop;        
+          }
+          else {  //IS already At best direction
+            PATHMATRIX[index][1] = &top;
+          }
+        }
+//        memset(buffer, 0, sizeof buffer);
+
+      }
+    }
+  }
+}
+
+
+
 
 
 void setup() {
   // put your setup code here, to run once:
-  Serial.begin(9600);
-  randomSeed(analogRead(0));
+    Serial.begin(9600);
   
-  genInitialPoint();
-  
-  currentLoc.xpos = 2;
-  currentLoc.ypos = 7;
-  currentEnemyLoc.xpos = 2;
-  currentEnemyLoc.ypos = 5;
-  sprintf(buffer, "currentLoc xpos: %d ; currentLoc ypos: %d\n", currentLoc.xpos, currentLoc.ypos);
-  Serial.print (buffer);
-  sprintf(buffer, "currentEnemyLocation xpos: %d ; currentEnemyLocation ypos: %d\n", currentEnemyLoc.xpos, currentEnemyLoc.ypos);
-  Serial.print (buffer);
-  calcCostMatrix(); //Use calcCostMatrix to get Path that should be taken (list of points)
+//  calcCostMatrix(currentLoc, currentEnemyLoc); //Use calcCostMatrix to get Path that should be taken (list of points)
 
+
+    preCalculateMatrix();
+
+    
+
+//  Serial.print("\nGetting Index: \n");
+//  int index = getIndex(currentLoc, currentEnemyLoc);
+//  Serial.print(index, DEC);
 
 }
 
@@ -425,4 +470,8 @@ void loop() {
   // put your main code here, to run repeatedly:
 
 }
+
+
+//    Flat[x + WIDTH * (y + DEPTH * (z + TIME * t ))] = Original[x, y, z, t]
+
 
