@@ -1,7 +1,26 @@
 #include <math.h>
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include <Wire.h>
+#include <SPI.h>
+#include <SparkFunLSM9DS1.h>
 
+
+LSM9DS1 imu;
+
+
+// SDO_XM and SDO_G are both pulled high, so our addresses are:
+#define LSM9DS1_M  0x1E // Would be 0x1C if SDO_M is LOW
+#define LSM9DS1_AG  0x6B // Would be 0x6A if SDO_AG is LOW
+
+
+#define PRINT_CALCULATED
+
+// Earth's magnetic field varies by location. Add or subtract 
+// a declination to get a more accurate heading. Calculate 
+// your's here:
+// http://www.ngdc.noaa.gov/geomag-web/#declination
+#define DECLINATION -3.58 // Declination (degrees) in Boulder, CO.
 
 #define XROW 9
 #define YROW 9
@@ -39,7 +58,7 @@ double xOld2 = 0, yOld2 = 0, xFilt2 = 0, yFilt2 = 0;
 double xOld3 = 0, yOld3 = 0, xFilt3 = 0, yFilt3 = 0;
 
 short ourLastX;
-short ourlastY;
+short ourLastY;
 short theirLastX;
 short theirLastY;
 short ourCurrX;
@@ -64,15 +83,15 @@ double yMax;
 // Make sure that the d pins are preferably normal pins that don't have anlaog in
 // A pins go to the analog input for the h bridge (enable)
 // D pins go t othe digital input for H bridge (phase)
-int frontLeftA = 23;
-int frontLeftD = 19;
+int frontLeftA = 22;
+int frontLeftD = 16;
 int backLeftA = 20;
-int backLeftD = 13;
+int backLeftD = 14;
 
-int frontRightA = 22;
-int frontRightD = 18;
+int frontRightA = 23;
+int frontRightD = 17;
 int backRightA = 21;
-int backRightD = 14;
+int backRightD = 15;
 
 //Setup the serial for the xbee
 void xbeeSetup(){
@@ -108,7 +127,80 @@ void ltdSetup(){
 }
 
 
+void imuSetup() 
+{
 
+  // Before initializing the IMU, there are a few settings
+  // we may need to adjust. Use the settings struct to set
+  // the device's communication mode and addresses:
+  imu.settings.device.commInterface = IMU_MODE_I2C;
+  imu.settings.device.mAddress = LSM9DS1_M;
+  imu.settings.device.agAddress = LSM9DS1_AG;
+  // The above lines will only take effect AFTER calling
+  // imu.begin(), which verifies communication with the IMU
+  // and turns it on.
+  if (!imu.begin())
+  {
+    Serial.println("Failed to communicate with LSM9DS1.");
+    Serial.println("Double-check wiring.");
+    Serial.println("Default settings in this sketch will " \
+                  "work for an out of the box LSM9DS1 " \
+                  "Breakout, but may need to be modified " \
+                  "if the board jumpers are.");
+    while (1)
+      ;
+  }
+  imu.calibrate(true);
+  imu.calibrateMag(true);
+}
+
+void imuReadVals(){
+  // Update the sensor values whenever new data is available
+  if ( imu.gyroAvailable() )
+  {
+    // To read from the gyroscope,  first call the
+    // readGyro() function. When it exits, it'll update the
+    // gx, gy, and gz variables with the most current data.
+    imu.readGyro();
+  }
+  if ( imu.accelAvailable() )
+  {
+    // To read from the accelerometer, first call the
+    // readAccel() function. When it exits, it'll update the
+    // ax, ay, and az variables with the most current data.
+    imu.readAccel();
+  }
+  if ( imu.magAvailable() )
+  {
+    // To read from the magnetometer, first call the
+    // readMag() function. When it exits, it'll update the
+    // mx, my, and mz variables with the most current data.
+    imu.readMag();
+  }
+}
+
+double calcYaw(){
+ double heading;
+ double mx, my;
+ mx = imu.calcMag(imu.mx);
+ my = imu.calcMag(imu.my);
+  if (my == 0)
+  {
+    heading = (mx < 0) ? PI : 0;
+  }
+  else{
+    heading = (double)  atan2(mx, my);
+  }
+  heading -= DECLINATION * PI / 180;
+  
+  if (heading > PI) heading -= (2 * PI);
+  else if (heading < -PI) heading += (2 * PI);
+  else if (heading < 0) heading += 2 * PI;
+  
+  // Convert everything from radians to degrees:
+  heading *= 180.0 / PI;
+  return heading;
+}
 
 void getEnemyPosition(){  
   
@@ -297,6 +389,7 @@ void setup(){
   motorSetup();
   xbeeSetup();
   ltdSetup();
+  imuSetup();
 }
 
 
@@ -306,7 +399,7 @@ void loop() {
   // call stuff in here
   // also if the directions are wrong, you can switch which wire goes to which out pin from the 
   // h bridge for that motor
-    moveMotors(175, false, 175, false);
+   /* moveMotors(175, false, 175, false);
     delay(1100);
     moveMotors(125, true, 125, false );
     delay(1000);
@@ -314,6 +407,20 @@ void loop() {
     delay(1000);
     moveMotors(125, false, 125, true);
     delay(1000);
+    */
+   // moveMotors(150, true, 150, true);
+    //delay(1000);
+  /*  moveMotors(255, true, 255, false);
+    delay(2000);
+    moveMotors(255, false, 255, true);
+    delay(2000);
+    */
+    
+    moveMotors(255, false, 255, false);
+    
+    delay(2000);
+    moveMotors(255, true, 255, true);
+    delay(2000);
     if (micros() - prevTime > 1000000 / 25) {
     if (V1.useMe == 1) {
       prevTime = micros();
@@ -331,12 +438,15 @@ void loop() {
       prevTime3 = micros();
       findPosition(xOld3, yOld3, xFilt3, yFilt3, 2);
     }
-    }  
+    }
+   
+      
 
     //calc average from lighthouse
     double newXCombo = (xFilt3 + xFilt2 + xFilt1) / 3.0;
     double newYCombo = (yFilt3 + yFilt2 + yFilt1) / 3.0;
 
+    
 
 
 
@@ -352,11 +462,17 @@ void loop() {
 
 
     // after we have the finalized combos in newXCombo and newYCombo::
-    //PUT IT INTO Grid woooo
+    // PUT IT INTO Grid woooo
+    // Also saving into curr
     ourLastX = ourCurrX;
     ourLastY = ourCurrY;
     posToGrid(ourCurrX, ourCurrY, newXCombo, newYCombo);
-   
+    //imu stuff:
+    imuReadVals();
+    double yaw = calcYaw();
+
+
+    
     
     getEnemyPosition();
     //print stuff
@@ -383,6 +499,9 @@ void loop() {
     Serial.print("\t");
     Serial.print("Enemy yPos: \t");
     Serial.print(enemyY);
+    Serial.print("\r\n");
+    Serial.print("Yaw: \t");
+    Serial.print(yaw);
     Serial.print("\r\n");
  
 
