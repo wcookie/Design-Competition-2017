@@ -71,7 +71,7 @@ int backRightD = 17;
 
 //Setup the serial for the xbee
 void xbeeSetup(){
-  Serial2.begin(9600);
+  Serial3.begin(9600);
 }
 
 //setup the light to digital sensor(s?)
@@ -97,15 +97,14 @@ void ltdSetup(){
 
 
 
-void getEnemyPosition(double &xPos, double &yPos){  
+void getEnemyPosition(){  
   
 
-   if (Serial2.available() > 0) {
-   msg[msg_index] = Serial2.read();
+   if (Serial3.available() > 0) {
+   msg[msg_index] = Serial3.read();
    //Serial.print(msg[msg_index]);
    if (msg[msg_index] == '\n') {
-
-     sscanf(msg, "%f %f", &xPos, &yPos);  
+     sscanf(msg, "%lf %lf", &enemyX, &enemyY);  
      msg_index = 0;
    }
    else {
@@ -300,11 +299,9 @@ void loop() {
         prevTime2 = micros();
         findPosition(xOld2, yOld2, xFilt2, yFilt2, 2);
     }
-    }
-
-    
-    getEnemyPosition(enemyX, enemyY);
-
+    }  
+    getEnemyPosition();
+    //print stuff
     Serial.print("Xfilt: \t");
     Serial.print(xFilt);
     Serial.print("\t");
@@ -316,15 +313,14 @@ void loop() {
     Serial.print("\t");
     Serial.print("Yfilt2: \t");
     Serial.print(yFilt2);
-    Serial.print("\r\n");
+    Serial.print("\r\n");  
     Serial.print("Enemy xPos: \t");
     Serial.print(enemyX);
     Serial.print("\t");
     Serial.print("Enemy yPos: \t");
     Serial.print(enemyY);
     Serial.print("\r\n");
-    
-  
+ 
 
 }
 void ISRV1() {
