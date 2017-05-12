@@ -6,9 +6,9 @@
 #define XROW 9
 #define YROW 9
 
-#define V1PIN 4
-#define V2PIN 3 // the signal from the sensor
-#define V3Pin 2
+#define V1PIN 12
+#define V2PIN 11 // the signal from the sensor
+#define V3PIN 2
 #define DEG_PER_US 0.0216 // (180 deg) / (8333 us)
 #define LIGHTHOUSEHEIGHT 6.0
 
@@ -27,8 +27,10 @@ typedef struct {
 
 volatile viveSensor V1;
 volatile viveSensor V2;
+volatile viveSensor V3;
 unsigned long prevTime = 0;
 unsigned long prevTime2 = 0;
+unsigned long prevTime3 = 0;
 int state = 0;
 double xCombo = 0, yCombo = 0;
 double xOld = 0, yOld = 0, xFilt = 0, yFilt = 0;
@@ -71,7 +73,7 @@ int backRightD = 17;
 
 //Setup the serial for the xbee
 void xbeeSetup(){
-  Serial2.begin(9600);
+  Serial3.begin(9600);
 }
 
 //setup the light to digital sensor(s?)
@@ -91,21 +93,28 @@ void ltdSetup(){
   V2.collected = 0;
   // interrupt on any sensor change
   attachInterrupt(digitalPinToInterrupt(V2PIN), ISRV2, CHANGE);
+  pinMode(V3PIN, INPUT); // to read the sensor
+  // initialize the sensor variables
+  V3.horzAng = 0;
+  V3.vertAng = 0;
+  V3.useMe = 0;
+  V3.collected = 0;
+  // interrupt on any sensor change
+  attachInterrupt(digitalPinToInterrupt(V3PIN), ISRV3, CHANGE);
   
 }
 
 
 
 
-void getEnemyPosition(double &xPos, double &yPos){  
+void getEnemyPosition(){  
   
 
-   if (Serial2.available() > 0) {
-   msg[msg_index] = Serial2.read();
+   if (Serial3.available() > 0) {
+   msg[msg_index] = Serial3.read();
    //Serial.print(msg[msg_index]);
    if (msg[msg_index] == '\n') {
-
-     sscanf(msg, "%f %f", &xPos, &yPos);  
+     sscanf(msg, "%lf %lf", &enemyX, &enemyY);  
      msg_index = 0;
    }
    else {
@@ -183,9 +192,9 @@ void findPosition(double &xOld, double &yOld, double &xFilt, double &yFilt, shor
         yPos = tan((V2.horzAng - 90.0) * DEG_TO_RAD) * LIGHTHOUSEHEIGHT; 
       }
       else if (num == 3){
-        //v3.useMe = 0;
-        //xPos = tan((V3.vertAng - 90.0) * DEG_TO_RAD) * LIGHTHOUSEHEIGHT;
-        //yPos = tan((V3.horzAng - 90.0) * DEG_TO_RAD) * LIGHTHOUSEHEIGHT; 
+        V3.useMe = 0;
+        xPos = tan((V3.vertAng - 90.0) * DEG_TO_RAD) * LIGHTHOUSEHEIGHT;
+        yPos = tan((V3.horzAng - 90.0) * DEG_TO_RAD) * LIGHTHOUSEHEIGHT; 
       }
       else if (num == 4){
        //v4.useMe = 0;
@@ -288,7 +297,15 @@ void loop() {
   // call stuff in here
   // also if the directions are wrong, you can switch which wire goes to which out pin from the 
   // h bridge for that motor
-    //moveMotors(100, true, 100, true);
+    moveMotors(255, true, 255, true);
+    delay(1100);
+    moveMotors(255, true, 50, false );
+    delay(1000);
+    moveMotors(100, true, 100, true);
+    delay(1000);
+    moveMotors(50, false, 255, true);
+    delay(1000);
+    moveMotors(255, true, 255, true);
     if (micros() - prevTime > 1000000 / 25) {
     if (V1.useMe == 1) {
       prevTime = micros();
@@ -300,11 +317,15 @@ void loop() {
         prevTime2 = micros();
         findPosition(xOld2, yOld2, xFilt2, yFilt2, 2);
     }
+    }  
+    if (micros() - prevTime2 > 1000000 / 25){
+    if (V3.useMe == 1){
+      prevTime3 = micros();
+      findPosition(xOld3, yOld3, xFilt3, yFilt3, 2);
     }
-
-    
-    getEnemyPosition(enemyX, enemyY);
-
+    }  
+    getEnemyPosition();
+    //print stuff
     Serial.print("Xfilt: \t");
     Serial.print(xFilt);
     Serial.print("\t");
@@ -316,6 +337,12 @@ void loop() {
     Serial.print("\t");
     Serial.print("Yfilt2: \t");
     Serial.print(yFilt2);
+    Serial.print("\r\n");  
+    Serial.print("Xfilt3: \t");
+    Serial.print(xFilt);
+    Serial.print("\t");
+    Serial.print("Yfilt3: \t");
+    Serial.print(yFilt);
     Serial.print("\r\n");
     Serial.print("Enemy xPos: \t");
     Serial.print(enemyX);
@@ -323,8 +350,7 @@ void loop() {
     Serial.print("Enemy yPos: \t");
     Serial.print(enemyY);
     Serial.print("\r\n");
-    
-  
+ 
 
 }
 void ISRV1() {
@@ -353,7 +379,7 @@ void ISRV1() {
 }
 
 
-// the sensor interrupt
+// the second ensor interrupt
 void ISRV2() {
   // get the time the interrupt occured
   unsigned long mic = micros();
@@ -379,4 +405,28 @@ void ISRV2() {
   }
 }
 
+//3rd sensor interrupt
+void ISRV3() {
+  // get the time the interrupt occured
+  unsigned long mic = micros();
+  int i;
 
+  // shift the time into the buffer
+  for (i = 0; i < 10; i++) {
+    V3.changeTime[i] = V3.changeTime[i + 1];
+  }
+  V3.changeTime[10] = mic;
+
+  // if the buffer is full
+  if (V3.collected < 11) {
+    V3.collected++;
+  }
+  else {
+    // if the times match the waveform pattern
+    if ((V3.changeTime[1] - V3.changeTime[0] > 7000) && (V3.changeTime[3] - V3.changeTime[2] > 7000) && (V3.changeTime[6] - V3.changeTime[5] < 50) && (V3.changeTime[10] - V3.changeTime[9] < 50)) {
+      V3.horzAng = (V3.changeTime[5] - V3.changeTime[4]) * DEG_PER_US;
+      V3.vertAng = (V3.changeTime[9] - V3.changeTime[8]) * DEG_PER_US;
+      V3.useMe = 1;
+    }
+  }
+}
