@@ -42,7 +42,10 @@ short ourLastX;
 short ourlastY;
 short theirLastX;
 short theirLastY;
-
+short ourCurrX;
+short ourCurrY;
+short theirCurrX;
+short theirCurrY;
 char msg[100];
 char msg_index = 0;
 
@@ -350,9 +353,9 @@ void loop() {
 
     // after we have the finalized combos in newXCombo and newYCombo::
     //PUT IT INTO Grid woooo
-    short gridXCombo = 0;
-    short gridYCombo = 0;
-    posToGrid(gridXCombo, gridYCombo, newXCombo, newYCombo);
+    ourLastX = ourCurrX;
+    ourLastY = ourCurrY;
+    posToGrid(ourCurrX, ourCurrY, newXCombo, newYCombo);
    
     
     getEnemyPosition();
