@@ -156,7 +156,6 @@ StackArray<point> BFS(int cost[][XROW], point src, point dest)
             }
             sprintf(buffer, "Total distance of Path: %d\n", distance);
             Serial.print (buffer);
-            // print_list(curr);
             memset(visited, 0, sizeof visited);
             return path;
           }
@@ -311,7 +310,12 @@ StackArray<point> calcCostMatrix(){
 
 
 
-int main() {
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  randomSeed(analogRead(0));
+
   
   genInitialPoint();
   sprintf(buffer, "currentLoc xpos: %d ; currentLoc ypos: %d\n", currentLoc.xpos, currentLoc.ypos);
@@ -319,17 +323,6 @@ int main() {
   sprintf(buffer, "currentEnemyLocation xpos: %d ; currentEnemyLocation ypos: %d\n", currentEnemyLoc.xpos, currentEnemyLoc.ypos);
   Serial.print (buffer);
   calcCostMatrix(); //Use calcCostMatrix to get Path that should be taken (list of points)
-
-  return 0;
-}
-
-
-
-void setup() {
-  // put your setup code here, to run once:
-  Serial.begin(9600);
-  randomSeed(analogRead(0));
-  main();
   
 
 }
