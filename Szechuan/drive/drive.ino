@@ -6,9 +6,9 @@
 #define XROW 9
 #define YROW 9
 
-#define V1PIN 4
-#define V2PIN 3 // the signal from the sensor
-#define V3Pin 2
+#define V1PIN 12
+#define V2PIN 11 // the signal from the sensor
+#define V3PIN 2
 #define DEG_PER_US 0.0216 // (180 deg) / (8333 us)
 #define LIGHTHOUSEHEIGHT 6.0
 
@@ -287,7 +287,15 @@ void loop() {
   // call stuff in here
   // also if the directions are wrong, you can switch which wire goes to which out pin from the 
   // h bridge for that motor
-    //moveMotors(100, true, 100, true);
+    moveMotors(255, true, 255, true);
+    delay(1100);
+    moveMotors(255, true, 50, false );
+    delay(1000);
+    moveMotors(100, true, 100, true);
+    delay(1000);
+    moveMotors(50, false, 255, true);
+    delay(1000);
+    moveMotors(255, true, 255, true);
     if (micros() - prevTime > 1000000 / 25) {
     if (V1.useMe == 1) {
       prevTime = micros();
