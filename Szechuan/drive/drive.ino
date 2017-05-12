@@ -338,6 +338,12 @@ void loop() {
     Serial.print("Yfilt2: \t");
     Serial.print(yFilt2);
     Serial.print("\r\n");  
+    Serial.print("Xfilt3: \t");
+    Serial.print(xFilt);
+    Serial.print("\t");
+    Serial.print("Yfilt3: \t");
+    Serial.print(yFilt);
+    Serial.print("\r\n");
     Serial.print("Enemy xPos: \t");
     Serial.print(enemyX);
     Serial.print("\t");
