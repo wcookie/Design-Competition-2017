@@ -33,7 +33,7 @@ unsigned long prevTime2 = 0;
 unsigned long prevTime3 = 0;
 int state = 0;
 double xCombo = 0, yCombo = 0;
-double xOld = 0, yOld = 0, xFilt = 0, yFilt = 0;
+double xOld1 = 0, yOld1 = 0, xFilt1 = 0, yFilt1 = 0;
 double enemyX, enemyY;
 double xOld2 = 0, yOld2 = 0, xFilt2 = 0, yFilt2 = 0;
 double xOld3 = 0, yOld3 = 0, xFilt3 = 0, yFilt3 = 0;
@@ -64,12 +64,12 @@ double yMax;
 int frontLeftA = 23;
 int frontLeftD = 19;
 int backLeftA = 20;
-int backLeftD = 16;
+int backLeftD = 13;
 
 int frontRightA = 22;
 int frontRightD = 18;
 int backRightA = 21;
-int backRightD = 17;
+int backRightD = 14;
 
 //Setup the serial for the xbee
 void xbeeSetup(){
@@ -127,11 +127,17 @@ void getEnemyPosition(){
 
 }
 
+double toDegrees(double rads){
+  return rads * 180.0 / M_PI;
+}
+
+
+
 // should take it so it has arguments
-void posToGrid(short &xCoord, short &yCoord){ 
-  double xPercent = (xFilt - xInit) / (xMax - xInit);
+void posToGrid(short &xCoord, short &yCoord, double xInGrid, double yInGrid){ 
+  double xPercent = (xInGrid - xInit) / (xMax - xInit);
   xCoord = round(xPercent * 8.0);
-  double yPercent = (yFilt - yInit) / (yMax - yInit);
+  double yPercent = (yInGrid - yInit) / (yMax - yInit);
   yCoord = round(yPercent * 8.0);
 }
 
@@ -297,19 +303,18 @@ void loop() {
   // call stuff in here
   // also if the directions are wrong, you can switch which wire goes to which out pin from the 
   // h bridge for that motor
-    moveMotors(255, true, 255, true);
+    moveMotors(175, false, 175, false);
     delay(1100);
-    moveMotors(255, true, 50, false );
+    moveMotors(125, true, 125, false );
     delay(1000);
-    moveMotors(100, true, 100, true);
+    moveMotors(175, false, 175, false);
     delay(1000);
-    moveMotors(50, false, 255, true);
+    moveMotors(125, false, 125, true);
     delay(1000);
-    moveMotors(255, true, 255, true);
     if (micros() - prevTime > 1000000 / 25) {
     if (V1.useMe == 1) {
       prevTime = micros();
-      findPosition(xOld, yOld, xFilt, yFilt, 1);
+      findPosition(xOld1, yOld1, xFilt1, yFilt1, 1);
     }
     }
     if (micros() - prevTime2 > 1000000 / 25){
@@ -324,13 +329,39 @@ void loop() {
       findPosition(xOld3, yOld3, xFilt3, yFilt3, 2);
     }
     }  
+
+    //calc average from lighthouse
+    double newXCombo = (xFilt3 + xFilt2 + xFilt1) / 3.0;
+    double newYCombo = (yFilt3 + yFilt2 + yFilt1) / 3.0;
+
+
+
+
+    // eliminate outliers
+    // :GENERAL STRAT:
+    // calculate how far new x is away from last xcombo.  
+    // if the idfference between one of lighthouse and other 2 is more than that diff,
+    // then ignore it2
+    // maybe calc sum and the # of divisors.  decide to subtract from sum and ALSO subtract from # of divisors.
+    // Don't forget; if # of divisors is 0, then use old xCombo.   
+ 
+
+
+
+    // after we have the finalized combos in newXCombo and newYCombo::
+    //PUT IT INTO Grid woooo
+    short gridXCombo = 0;
+    short gridYCombo = 0;
+    posToGrid(gridXCombo, gridYCombo, newXCombo, newYCombo);
+   
+    
     getEnemyPosition();
     //print stuff
-    Serial.print("Xfilt: \t");
-    Serial.print(xFilt);
+    Serial.print("Xfilt1: \t");
+    Serial.print(xFilt1);
     Serial.print("\t");
-    Serial.print("Yfilt: \t");
-    Serial.print(yFilt);
+    Serial.print("Yfilt1: \t");
+    Serial.print(yFilt1);
     Serial.print("\r\n");
     Serial.print("Xfilt2: \t");
     Serial.print(xFilt2);
@@ -339,10 +370,10 @@ void loop() {
     Serial.print(yFilt2);
     Serial.print("\r\n");  
     Serial.print("Xfilt3: \t");
-    Serial.print(xFilt);
+    Serial.print(xFilt2);
     Serial.print("\t");
     Serial.print("Yfilt3: \t");
-    Serial.print(yFilt);
+    Serial.print(yFilt2);
     Serial.print("\r\n");
     Serial.print("Enemy xPos: \t");
     Serial.print(enemyX);
