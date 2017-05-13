@@ -37,6 +37,11 @@ LSM9DS1 imu;
 #define slightkP 2
 #define extremekP .8
 #define extremekI 0
+#define NEW_DISTANCE_WEIGHT 5.0
+#define MY_DISTANCE_WEIGHT 1.5
+#define NEW_WALL_WEIGHT 1.0
+
+
 
 #define WALL_COST_WEIGHT 2 //Cost of being next to a Wall (Corners = 2 X WALL_COST_WEIGHT)
 #define EYESIGHT_WEIGHT 2 //Cost of being potentially seen by Enemy
@@ -547,10 +552,10 @@ char filter3PosIndex = 0;
 char enemyIndex = 0;
 double desiredYaw = 0 ;
 double gyroOffset = 0;
-short ourLastX;
-short ourLastY;
-short theirLastX;
-short theirLastY;
+short ourLastX = 2; // STARTING POSITIONS HERE:
+short ourLastY = 4;
+short theirLastX = 4;
+short theirLastY = 4 ;
 short ourCurrX;
 short ourCurrY;
 short theirCurrX;
@@ -906,6 +911,58 @@ void motorSetup() {
 }
 
 
+double distanceFunc(short distX, short distY, short otherX, short otherY){
+  short xDiff = otherX - distX;
+  short yDiff = otherY - distY;
+  return sqrt((xDiff * xDiff) + (yDiff * yDiff));
+}
+
+bool onWall(short testX, short testY){
+  return (testX == 0 || testX == 8 || testY == 0 || testY == 8);
+}
+
+// bigger is better
+double newDesirability(short trialX, short trialY){
+  //this is function that should definitely be talked about more and changed.
+  return NEW_DISTANCE_WEIGHT * distanceFunc(trialX, trialY, theirCurrX, theirCurrY) - MY_DISTANCE_WEIGHT * distanceFunc(trialX, trialY, ourCurrX, ourCurrY) - NEW_WALL_WEIGHT * onWall(trialX, trialY);
+}
+
+void decideNewPos(short &goHereX, short &goHereY){
+  double bestDesirability = -1;
+  double tempDes;
+  if(ourCurrX % 2 == 0){
+    if (ourCurrY != 0){
+      tempDes = newDesirability(ourCurrX, ourCurrY - 1);
+      if (tempDes < bestDesirability){
+        goHereX = ourCurrX;
+        goHereY = ourCurrY - 1;
+      }
+    }
+    if (ourCurrY != 8){
+      tempDes = newDesirability(ourCurrX, ourCurrY + 1);
+      if (tempDes < bestDesirability){
+        goHereX = ourCurrX;
+        goHereY = ourCurrY + 1;
+      }
+    }
+  }
+  if (ourCurrY % 2 == 0){
+    if (ourCurrX != 0){
+      tempDes = newDesirability(ourCurrX - 1, ourCurrY);
+      if (tempDes < bestDesirability){
+        goHereX = ourCurrX - 1;
+        goHereY = ourCurrY;
+      }
+    }
+    if (ourCurrX != 8){
+      tempDes = newDesirability(ourCurrX + 1, ourCurrY);
+      if (tempDes < bestDesirability){
+        goHereX = ourCurrX + 1;
+        goHereY = ourCurrY;
+      }
+    }
+  }
+}
 
 
 void findPosition1(double &xOld, double &yOld, double &xFilt, double &yFilt, short num){
@@ -1017,20 +1074,33 @@ bool needToRecalc(){
 }
 
 
+void bind(short &val){
+  if (val <0){
+    val = 0;
+  }
+  if (val > 8){
+    val = 8;
+  }
+}
+
+
 void setup(){
   Serial.begin(9600);
   motorSetup();
   xbeeSetup();
   ltdSetup();
-  imuSetup();
+  Serial.println("enter precalc");
   preCalculateMatrix();
+  Serial.println("Done calculating");
+  imuSetup();
+  
+
   
 //  desiredYaw = 90;
 }
 
 
 void loop() {
-
   // call stuff in here
   // also if the directions are wrong, you can switch which wire goes to which out pin from the 
   // h bridge for that motor
@@ -1085,20 +1155,46 @@ void loop() {
     short goalX = ourCurrX + 1;
     short nextGoalX;
     short nextGoalY;
-    ourLastX = ourCurrX;
-    ourLastY = ourCurrY;
-    theirLastX = theirCurrX;
-    theirLastY = theirCurrY;
+    // if its odd / in column
+
+    short ourTempLastX = ourCurrX;
+    short ourTempLastY = ourCurrY;
+    short theirTempLastX = theirCurrX;
+    short theirTempLastY = theirCurrY;
     posToGrid(ourCurrX, ourCurrY, newXCombo, newYCombo);
     posToGrid(theirCurrX, theirCurrY, enemyX, enemyY);
-    
+    if (!(ourCurrX % 2 == 1 && ourCurrY % 2 == 1)){
+      ourLastX = ourTempLastX;
+      ourLastY = ourTempLastX;
+    }
+    else {
+      ourCurrX = ourLastX;
+      ourCurrY = ourLastY;
+    }
+    if (!(theirCurrX % 2 == 1 && theirCurrY %2 == 1)){
+      theirLastX = theirTempLastX;
+      theirLastY = theirTempLastY;
+    }
+    else{
+      theirCurrX = theirLastX;
+      theirCurrY = theirLastY;
+    }
+    bind(ourCurrX);
+    bind(ourCurrY);
+    bind(ourLastX);
+    bind(ourLastY);
+    bind(theirCurrX);
+    bind(theirCurrY);
+    bind(theirLastX);
+    bind(theirLastY);
     //ourCurrX, ourCurrY are our grid positions (shorts)
     //theirCurrX, theirCurrY are their grid positions (shorts)
     //call your function, and give me (for now) goalX and goalY (as shorts) for grid positions
     //nextGoalX and nextGoalY are the next ones (also shorts). 
     //All in grid positions, (0-8), (0-8)
-    
+   // decideNewPos(goalX, goalY); 
     int index;
+    
     //CASEs for when we are not on even and they are not on even squares grid
     if (!(ourCurrX%2 == 0 && ourCurrY%2 == 0) && !(theirCurrX%2 == 0 && theirCurrY%2 == 0)){
       index = getIndex((int)(2*ourCurrX-ourLastX), (int)(2*ourCurrY-ourLastY), (int)(2*theirCurrX-theirLastX), (int)(2*theirCurrY-theirLastY));
@@ -1118,6 +1214,7 @@ void loop() {
     nextGoalX = (short)PATHMATRIX[index][1].xpos;
     nextGoalY = (short)PATHMATRIX[index][1].ypos;
 
+    Serial.println("entered loop");
 
     if (goalX > ourCurrX){
       desiredYaw = 90;
@@ -1138,6 +1235,8 @@ void loop() {
     else {
       motorsOff = true;
     }
+    motorsOff = true;
+    
     //imu stuff:
    // imuReadVals();
     // get yaw
@@ -1238,6 +1337,7 @@ void loop() {
     Serial.print("Yfilt3: \t");
     Serial.print(yFilt2);
     Serial.print("\r\n");
+    
     Serial.print("Enemy xPos: \t");
     Serial.print(enemyX);
     Serial.print("\t");
@@ -1268,6 +1368,14 @@ void loop() {
     Serial.println(ourCurrX);
     Serial.print("Y grid \t");
     Serial.println(ourCurrY);
+    Serial.print("Xcombo: \t");
+    Serial.println(newXCombo);
+    Serial.print("Ycombo: \t");
+    Serial.println(newYCombo); 
+    Serial.print("Theri X \t");
+    Serial.println(theirCurrX);
+    Serial.print("Their Y \t");
+    Serial.println(theirCurrY);
    
 
 }
