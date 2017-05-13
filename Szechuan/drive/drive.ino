@@ -158,7 +158,7 @@ void imuSetup()
   // The above lines will only take effect AFTER calling
   // imu.begin(), which verifies communication with the IMU
   // and turns it on.
-  if (!imu.begin())
+  while (!imu.begin())
   {
     Serial.println("Failed to communicate with LSM9DS1.");
     Serial.println("Double-check wiring.");
@@ -166,8 +166,7 @@ void imuSetup()
                   "work for an out of the box LSM9DS1 " \
                   "Breakout, but may need to be modified " \
                   "if the board jumpers are.");
-    while (1)
-      ;
+  
   }
   imu.calibrate(true);
   imu.calibrateMag(true);
