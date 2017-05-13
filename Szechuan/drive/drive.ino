@@ -96,10 +96,18 @@ double yawITerm = 0;
 //Back right is 0, 8.
 //Front left is 8, 0
 //Front right is 8,8
-double xInit;
-double xMax;
-double yInit;
-double yMax;
+//3.6 x 4.2 y
+//4.2 x -5.6 y
+// -5.9x -6.2 y
+//- 6x 3.8 y
+double xInit1 = -6.2;
+double xInit2 = -5.9;
+double xMax1 = 3.6;
+double xMax2 = 4.2;
+double yInit1 = -6.2;
+double yInit2 = -5.6;
+double yMax1 = 4.2;
+double yMax2 = 3.8;
 
 //these pin #s were chosen randomly.  These are for h bridge stuff,
 // make sure the A pins are actually PWM pins from teensy lc pinout
@@ -318,18 +326,29 @@ double toDegrees(double rads){
 
 // should take it so it has arguments
 void posToGrid(short &xCoord, short &yCoord, double xInGrid, double yInGrid){ 
+  double xMaxSlope;
+  double xMaxAvg = (xMax2 + xMax1 ) / 2.0;
+  double xInitAvg = (xInit1 + xInit2) / 2.0;
+  double yMaxAvg = (yMax2 + yMax1) / 2.0;
+  double yInitAvg = (yInit1 + yInit2) / 2.0;
+  double closeToX = (xInGrid - xInitAvg) / (xMaxAvg - xInitAvg);
+  double closeToY = (yInGrid - yInitAvg) / (yMaxAvg - yInitAvg);
+  double xMax = closeToY * (xMax2 - xMax1) + xMax1;
+  double yMax = closeToX * (yMax2 - yMax1) + yMax1;
+  double xInit = closeToY * (xInit2 - xInit1) + xInit1;
+  double yInit = closeToX * (yInit2 - yInit1) + yInit1;
   double xPercent = (xInGrid - xInit) / (xMax - xInit);
   xCoord = round(xPercent * 8.0);
   double yPercent = (yInGrid - yInit) / (yMax - yInit);
   yCoord = round(yPercent * 8.0);
 }
-
+/*
 void gridToPos(short xCoord, short yCoord, double &xExact, double &yExact){
   double xDiff = xMax - xInit;
   double yDiff = yMax - yInit;
   xExact = xInit + xDiff * (double) xCoord / 8.0;
   yExact = yInit + yDiff * (double) yCoord / 8.0;
-}
+}*/
 
 //read X and Y seperated by space.
 
@@ -657,10 +676,7 @@ void loop() {
       else if (rightMotorSpeed < 0){
         rightMotorSpeed = 0;
       }
-      //3.6 x 4.2 y
-      //4.2 x -5.6 y
-      // -5.9x -6.2 y
-      //- 6x 3.8 y
+
    // moveMotors(leftMotorSpeed, true, rightMotorSpeed, true);
     }
     else if (abs(diff) > 1){
@@ -738,6 +754,10 @@ void loop() {
     Serial.println(newXCombo);
     Serial.print("Ycombo: \t");
     Serial.println(newYCombo); 
+    Serial.print("X grid \t");
+    Serial.println(ourCurrX);
+    Serial.print("Y grid \t");
+    Serial.println(ourCurrY);
    
 
 }
