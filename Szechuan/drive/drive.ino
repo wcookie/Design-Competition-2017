@@ -50,7 +50,7 @@ typedef struct {
 typedef struct {
   double x;
   double y;
-}enemy;
+}lightPoint;
 
 volatile viveSensor V1;
 volatile viveSensor V2;
@@ -60,15 +60,22 @@ unsigned long prevTime2 = 0;
 unsigned long prevTime3 = 0;
 unsigned long lastYawTime = 0;
 unsigned long lastEnemyTime = 0;
+unsigned long lastFilt1Time = 0;
+unsigned long lastFilt2Time = 0;
+unsigned long lastFilt3Time = 0;
 int state = 0;
 double xCombo = 0, yCombo = 0;
 double xOld1 = 0, yOld1 = 0, xFilt1 = 0, yFilt1 = 0;
 double xOld2 = 0, yOld2 = 0, xFilt2 = 0, yFilt2 = 0;
 double xOld3 = 0, yOld3 = 0, xFilt3 = 0, yFilt3 = 0;
 double enemyX, enemyY;
-enemy enemyArr[10];
+lightPoint enemyArr[10];
+lightPoint filterPosArr[30];
+char filter1PosIndex = 0;
+char filter2PosIndex = 0;
+char filter3PosIndex = 0;
 char enemyIndex = 0;
-double desiredYaw =0 ;
+double desiredYaw = 0 ;
 short ourLastX;
 short ourLastY;
 short theirLastX;
@@ -142,7 +149,9 @@ void ltdSetup(){
   V3.collected = 0;
   // interrupt on any sensor change
   attachInterrupt(digitalPinToInterrupt(V3PIN), ISRV3, CHANGE);
-  
+  lastFilt1Time = millis();
+  lastFilt2Time = millis();
+  lastFilt3Time = millis();
 }
 
 
@@ -248,17 +257,9 @@ void getEnemyPosition(){
        msg_index = 0;
      }
    }
-   enemy tempE;
+   lightPoint tempE;
    tempE.x = tempX;
    tempE.y = tempY;
-   if(abs(tempX - enemyX) < 1.5 || abs(tempY - enemyY) < 1.5 || ((millis() - lastEnemyTime) > 100)){
-     enemyArr[enemyIndex] = tempE;
-     ++enemyIndex;
-     if(enemyIndex > 9){
-      enemyIndex = 0;
-     }
-   }
-  
     double summx = 0;
     double summy = 0;
     short numEnemies = 0;
@@ -269,8 +270,28 @@ void getEnemyPosition(){
         ++numEnemies;
     }
    }
-   enemyX = .7 * summx / numEnemies + .3 * tempX;
-   enemyY = .7 * summy / numEnemies + .3 * tempY;
+   if(abs(tempX - enemyX) < 1.5 || abs(tempY - enemyY) < 1.5 || ((millis() - lastEnemyTime) > 100)){
+     enemyArr[enemyIndex] = tempE;
+     ++enemyIndex;
+     if(enemyIndex > 9){
+      enemyIndex = 0;
+     }
+   }
+   else{
+    enemyX = summx / numEnemies;
+    enemyY = summy / numEnemies;
+    return;
+   }
+  
+ 
+   if (numEnemies > 0 ){
+     enemyX = .7 * summx / numEnemies + .3 * tempX;
+     enemyY = .7 * summy / numEnemies + .3 * tempY;
+   }
+   else{
+    enemyX = tempX;
+    enemyY = tempY;
+   }
  }
  
 
@@ -336,34 +357,91 @@ void findPosition(double &xOld, double &yOld, double &xFilt, double &yFilt, shor
       /*Serial.print("Num: \t");
       Serial.print(num);
       Serial.print("\r\n");*/
+      char tempIndex;
       if (num == 1){
         V1.useMe = 0;
         xPos = tan((V1.vertAng - 90.0) * DEG_TO_RAD) * LIGHTHOUSEHEIGHT;
         yPos = tan((V1.horzAng - 90.0) * DEG_TO_RAD) * LIGHTHOUSEHEIGHT;
+       if(abs(xPos - xFilt1) < 1.5 || abs(yPos - yFilt1) < 1.5 || ((millis() - lastFilt1Time) > 100)){
+         tempIndex = filter1PosIndex;
+         ++filter1PosIndex;
+         if (filter1PosIndex > 9){
+           filter1PosIndex = 0;
+         }
+         lastFilt1Time = millis();
+       }
+       else{
+        return;
+       }
       }
       else if (num == 2){
         V2.useMe = 0;
         xPos = tan((V2.vertAng - 90.0) * DEG_TO_RAD) * LIGHTHOUSEHEIGHT;
         yPos = tan((V2.horzAng - 90.0) * DEG_TO_RAD) * LIGHTHOUSEHEIGHT; 
+        if(abs(xPos - xFilt2) < 1.5 || abs(yPos - yFilt2) < 1.5 || ((millis() - lastFilt2Time) > 100)){
+         tempIndex = filter2PosIndex;
+         ++filter2PosIndex;
+         if (filter2PosIndex > 9){
+           filter2PosIndex = 0;
+         }
+         lastFilt2Time = millis();
+       }
+       else{
+        return;
+       }
       }
       else if (num == 3){
         V3.useMe = 0;
         xPos = tan((V3.vertAng - 90.0) * DEG_TO_RAD) * LIGHTHOUSEHEIGHT;
         yPos = tan((V3.horzAng - 90.0) * DEG_TO_RAD) * LIGHTHOUSEHEIGHT; 
+        if(abs(xPos - xFilt3) < 1.5 || abs(yPos - yFilt3) < 1.5 || ((millis() - lastFilt3Time) > 100)){
+         tempIndex = filter3PosIndex;
+         ++filter3PosIndex;
+         if (filter3PosIndex > 9){
+           filter3PosIndex = 0;
+         }
+         lastFilt3Time = millis();
+       }
+       else{
+        return;
+       }
       }
-      else if (num == 4){
-       //v4.useMe = 0;
-       //xPos = tan((V4.vertAng - 90.0) * DEG_TO_RAD) * LIGHTHOUSEHEIGHT;
-       //yPos = tan((V4.horzAng - 90.0) * DEG_TO_RAD) * LIGHTHOUSEHEIGHT; 
+      //set to 0 for array indexing.
+      --num;
+      
+      
+      double summx = 0;
+      double summy = 0;
+      double numPoints = 0;
+      for (short tempIndex2 = (num * 10); tempIndex < (num + 1) * 10; ++tempIndex2){
+        if (filterPosArr[tempIndex2].x > - 100 && filterPosArr[tempIndex2].y > -100){
+          summx += filterPosArr[tempIndex2].x;
+          summx += filterPosArr[tempIndex2].y;
+          ++numPoints;
+          }
       }
+      lightPoint tempPoint;
+      tempPoint.x = xPos;
+      tempPoint.y = yPos;
+      filterPosArr[num * 10 + tempIndex] = tempPoint;
+      double xavg = summx / numPoints;
+      double yavg = summy / numPoints;
+     
+        if (numPoints > 0 ){
+          xFilt = .7 * xavg + .3 * xPos;
+          yFilt = .7 * yavg + .3 * yPos;
+        }
+        else{
+          xFilt = xPos;
+          yFilt = yPos;
+        }
+      
 
- 
-
-      xFilt = xOld * 0.5 + xPos * 0.5;
+     /* xFilt = xOld * 0.5 + xPos * 0.5;
       yFilt = yOld * 0.5 + yPos * 0.5;
 
       xOld = xFilt;
-      yOld = yFilt;
+      yOld = yFilt;*/
 }
 
 //true meaning this grid position would have the potential for eyesight between our robot and the enemies
