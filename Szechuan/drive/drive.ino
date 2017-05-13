@@ -872,13 +872,24 @@ void posToGrid(short &xCoord, short &yCoord, double xInGrid, double yInGrid){
   double yPercent = (yInGrid - yInit) / (yMax - yInit);
   yCoord = round(yPercent * 8.0);
 }
-/*
+
+
 void gridToPos(short xCoord, short yCoord, double &xExact, double &yExact){
+  double xMaxAvg = (xMax2 + xMax1 ) / 2.0;
+  double xInitAvg = (xInit1 + xInit2) / 2.0;
+  double yMaxAvg = (yMax2 + yMax1) / 2.0;
+  double yInitAvg = (yInit1 + yInit2) / 2.0;
+  double closeToX = double(xCoord) / 8.0;
+  double closeToY = double(yCoord) / 8.0;
+  double xMax = closeToY * (xMax2 - xMax1) + xMax1;
+  double yMax = closeToX * (yMax2 - yMax1) + yMax1;
+  double xInit = closeToY * (xInit2 - xInit1) + xInit1;
+  double yInit = closeToX * (yInit2 - yInit1) + yInit1;
   double xDiff = xMax - xInit;
   double yDiff = yMax - yInit;
-  xExact = xInit + xDiff * (double) xCoord / 8.0;
-  yExact = yInit + yDiff * (double) yCoord / 8.0;
-}*/
+  xExact = closeToX * xDiff + xInit;
+  yExact = closeToY * yDiff + yInit;
+}
 
 //read X and Y seperated by space.
 
@@ -1187,6 +1198,9 @@ void loop() {
     bind(theirCurrY);
     bind(theirLastX);
     bind(theirLastY);
+    double gridCenterX;
+    double gridCenterY;
+    gridToPos(ourCurrX, ourCurrY, gridCenterX, gridCenterY);
     //ourCurrX, ourCurrY are our grid positions (shorts)
     //theirCurrX, theirCurrY are their grid positions (shorts)
     //call your function, and give me (for now) goalX and goalY (as shorts) for grid positions
@@ -1376,6 +1390,10 @@ void loop() {
     Serial.println(theirCurrX);
     Serial.print("Their Y \t");
     Serial.println(theirCurrY);
+    Serial.print("grid Center X: \t");
+    Serial.println(gridCenterX);
+    Serial.print("grid Center Y: \t");
+    Serial.println(gridCenterY);
    
 
 }
