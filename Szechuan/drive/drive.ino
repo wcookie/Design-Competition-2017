@@ -276,12 +276,13 @@ void getEnemyPosition(){
         ++numEnemies;
     }
    }
-   if(abs(tempX - enemyX) < 1.5 || abs(tempY - enemyY) < 1.5 || ((millis() - lastEnemyTime) > 100)){
+   if(abs(tempX - enemyX) < 1.5 || abs(tempY - enemyY) < 1.5 || ((millis() - lastEnemyTime) > 50)){
      enemyArr[enemyIndex] = tempE;
      ++enemyIndex;
      if(enemyIndex > 9){
       enemyIndex = 0;
      }
+     lastEnemyTime = millis();
    }
    else{
     if (numEnemies > 0){
