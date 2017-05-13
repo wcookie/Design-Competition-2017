@@ -114,7 +114,7 @@ bool isEven(point coord){
 
 
 //Prints Cost Matrix in nice format with obstacles, enemy position and our position shown
-void printCostMatrix(int costMatrix[][XROW], point robotPos, point enemyPos){
+void printCostMatrix(int **costMatrix, point robotPos, point enemyPos){
   for (int h = 0; h < YROW; h++)
   {
     for (int w = 0; w < XROW; w++)
@@ -131,6 +131,10 @@ void printCostMatrix(int costMatrix[][XROW], point robotPos, point enemyPos){
       }
     }
     Serial.print ("\n");
+    
+      Serial.print("free ram: ");
+      Serial.print(freeMemory());
+      Serial.print("\n");
   }
 }
 
@@ -213,13 +217,13 @@ StackArray<point> findBestPath(int distanceArray[][XROW], point* prevArray[][XRO
 
 
 //Djikstras currently returns min cost of path from src
-StackArray<point> djikstra(int cost[][XROW], point src, point target)
+StackArray<point> djikstra(int **cost, point src, point target)
 {
     Serial.print ("\nInside Finding Min Cost Path\n");
     sprintf(buffer, "Current x: %d and Current y: %d\n", src.xpos, src.ypos);
     Serial.print (buffer);
 //    sprintf(buffer, "Target x: %d and Target y: %d\n", dest.xpos, dest.ypos);
-//    Serial.print (buffer);
+  //  Serial.print (buffer);
 
     Serial.print("Creating Priority Queue\n");
     heap_t* Q = new heap_t();
@@ -301,11 +305,24 @@ StackArray<point> djikstra(int cost[][XROW], point src, point target)
 //  -- Sensor Reach?
 StackArray<point> calcCostMatrix(point robotPos, point enemyPos){
 
-  //int *costMatrix;
-  int* costMatrix[XROW] = malloc(sizeof(int[XROW][XROW]));
- // int costMatrix[YROW][XROW];
-  memset(costMatrix, 0, sizeof costMatrix);
+  int **costMatrix;
+  //int* costMatrix[XROW] = malloc(sizeof(int[XROW][XROW]));
 
+  costMatrix = (int **)malloc(sizeof(int *) * XROW);
+  costMatrix[0] = (int *)malloc(sizeof(int) * XROW * YROW);
+  Serial.print("post mallocs \r\n");
+  short col_pointer;
+  for(col_pointer = 0; col_pointer < YROW; col_pointer++)
+    costMatrix[col_pointer] = (*costMatrix + YROW * col_pointer);
+  // might need to make custom memset
+  
+  //memset(costMatrix, 0, sizeof costMatrix);
+  for(int i = 0; i < XROW; ++i){
+    for (int j = 0; j < YROW; ++j){
+      costMatrix[i][j] = 0;
+    }
+  }
+Serial.print("Post memset \r \n ");
   int minCost = 1000;
   int maxEnemyDistance = 0;
   point target;
@@ -317,6 +334,7 @@ StackArray<point> calcCostMatrix(point robotPos, point enemyPos){
 //    costMatrix[y] = new int[XROW];
     for (int x = 0; x < XROW; x++)
     {
+    Serial.print(x);
       //initial Value to 1
       costMatrix[y][x]= 1;
 
@@ -374,18 +392,22 @@ StackArray<point> calcCostMatrix(point robotPos, point enemyPos){
 
     }
   }
-
+  Serial.print("Pre print \r\n");
   printCostMatrix(costMatrix, robotPos, enemyPos);
-
+  Serial.print("PRe djikstra \r\n");
   StackArray<point> path = djikstra(costMatrix, robotPos, target);
-
+  Serial.print("DJIKSTRA DONE \r\n");
   // printf("Path contains: \n");
   //
   // for (auto v : path)
   //   printf("POINT: xpos: %d ; ypos: %d\n", v.xpos, v.ypos );
 
 //  memset(costMatrix, 0, sizeof costMatrix);
+  for(col_pointer = 0; col_pointer < YROW; col_pointer++)
+    free(costMatrix[col_pointer]);
   free(costMatrix);
+  Serial.print("LEAVING: \r\n");
+  Serial.print(freeMemory());
   return path;
 }
 
@@ -408,11 +430,11 @@ void preCalculateMatrix(){
     for (int j = 0; j < XROW; j = j+2){
       for (int k = 0; k < YROW; k = k+2){
         for (int l = 0; l < XROW; l = l+2){
-//          Serial.print("\nCalculating Matrix\n");
-//          sprintf(buffer, "currentLoc xpos: %d ; currentLoc ypos: %d\n", j, i);
-//          Serial.print (buffer);
-//          sprintf(buffer, "currentEnemyLocation xpos: %d ; currentEnemyLocation ypos: %d\n", l, k);
-//          Serial.print (buffer);
+          Serial.print("\nCalculating Matrix\n");
+          sprintf(buffer, "currentLoc xpos: %d ; currentLoc ypos: %d\n", j, i);
+          Serial.print (buffer);
+        sprintf(buffer, "currentEnemyLocation xpos: %d ; currentEnemyLocation ypos: %d\n", l, k);
+          Serial.print (buffer);
 //          Serial.print(freeRam());
           Serial.print("freeMemory()=");
           Serial.println(freeMemory());
@@ -420,18 +442,19 @@ void preCalculateMatrix(){
           point pos = {j, i};
           point enemyLoc = {l, k};
           index = getIndex(pos, enemyLoc);
+          Serial.print("before calcCost \r\n");
           StackArray<point> path = calcCostMatrix(pos, enemyLoc); //Use calcCostMatrix to get Path that should be taken (list of points)
-                
+           Serial.print("AFTER: \r\n");
           point top = path.pop();
-//          sprintf(buffer, "Top xpos: %d ; Top ypos: %d\n", top.xpos, top.ypos);
-//          Serial.print (buffer);
+          sprintf(buffer, "Top xpos: %d ; Top ypos: %d\n", top.xpos, top.ypos);
+          Serial.print (buffer);
           PATHMATRIX[index][0] = &top;
     
           ///Has another direction to Go
           if (!path.isEmpty()){
             point secondtop = path.pop();
-//            sprintf(buffer, "secondtop xpos: %d ; secondtop ypos: %d\n", secondtop.xpos, secondtop.ypos);
-//            Serial.print (buffer);
+            sprintf(buffer, "secondtop xpos: %d ; secondtop ypos: %d\n", secondtop.xpos, secondtop.ypos);
+            Serial.print (buffer);
             PATHMATRIX[index][1] = &secondtop;        
           }
           else {  //IS already At best direction

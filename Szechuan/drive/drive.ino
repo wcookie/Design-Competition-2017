@@ -30,10 +30,11 @@ LSM9DS1 imu;
 #define V3PIN 2
 #define DEG_PER_US 0.0216 // (180 deg) / (8333 us)
 #define LIGHTHOUSEHEIGHT 6.0
-
+#define NEUTRALPOWER 150
 #define DISTANCE_WEIGHT 5.0
 #define EYESIGHT_WEIGHT 10.0
 #define WALL_WEIGHT 1.0
+#define kP 2
 typedef struct {
   unsigned long changeTime[11];
   int prevPulse;
@@ -56,7 +57,7 @@ double xOld1 = 0, yOld1 = 0, xFilt1 = 0, yFilt1 = 0;
 double enemyX, enemyY;
 double xOld2 = 0, yOld2 = 0, xFilt2 = 0, yFilt2 = 0;
 double xOld3 = 0, yOld3 = 0, xFilt3 = 0, yFilt3 = 0;
-
+double desiredYaw =0 ;
 short ourLastX;
 short ourLastY;
 short theirLastX;
@@ -390,6 +391,7 @@ void setup(){
   xbeeSetup();
   ltdSetup();
   imuSetup();
+  desiredYaw = calcYaw() + 50;
 }
 
 
@@ -416,11 +418,11 @@ void loop() {
     delay(2000);
     */
     
-    moveMotors(255, false, 255, false);
+    //moveMotors(255, false, 255, false);
     
-    delay(2000);
-    moveMotors(255, true, 255, true);
-    delay(2000);
+   // delay(2000);
+    //moveMotors(255, true, 255, true);
+    //delay(2000);
     if (micros() - prevTime > 1000000 / 25) {
     if (V1.useMe == 1) {
       prevTime = micros();
@@ -470,7 +472,23 @@ void loop() {
     //imu stuff:
     imuReadVals();
     double yaw = calcYaw();
-
+    // NEED TO DO THIS WITH THE 360 wrap around thing
+    double diff = yaw - desiredYaw;
+    double rightMotorSpeed = NEUTRALPOWER + (diff * kP);
+    double leftMotorSpeed = NEUTRALPOWER - (diff * kP);
+    if (leftMotorSpeed > 255){
+      leftMotorSpeed = 255;
+    }
+    else if (leftMotorSpeed < 0){
+      leftMotorSpeed = 0;
+    }
+    if (rightMotorSpeed > 255){
+      rightMotorSpeed = 255;
+    }
+    else if (rightMotorSpeed < 0){
+      rightMotorSpeed = 0;
+    }
+    moveMotors(leftMotorSpeed, true, rightMotorSpeed, true);
 
     
     
