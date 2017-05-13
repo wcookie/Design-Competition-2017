@@ -597,6 +597,10 @@ double yInit2 = -5.6;
 double yMax1 = 4.2;
 double yMax2 = 3.8;
 
+bool randomWalk = false;
+unsigned long enterRandomWalk;
+unsigned long exitRandomWalk;
+bool startRandomTimer = false;
 //new:
 /*
 double xInit1 = -5.9;
@@ -833,7 +837,13 @@ double calcYaw(){
   gyroYaw += (gyroZ - gyroOffset) * (tempTime - lastYawTime) * .000001; //- ((tempTime - lastYawTime) * .000001 * gyroDPSOff);
   lastYawTime = tempTime;
   lastHeading = heading;
-  return fmod(gyroYaw, 360) * .85 + .15 * (heading - initHeading);
+  // DO HEADING STUFF WITH 180 degrees, and gyroYaw. gyroYaw is getting within 360 degrees.  
+  double headingDiff = heading - initHeading;
+  double Weighter = .85;
+  double xSum = Weighter * cos(fmod(gyroYaw, 360) * M_PI / 180) + (1- Weighter) * cos(headingDiff * M_PI / 180);
+  double ySum = Weighter * sin(fmod(gyroYaw, 360) * M_PI / 180) +  (1- Weighter) * sin(headingDiff * M_PI / 180);
+  return atan2 (ySum, xSum);
+  //return fmod(gyroYaw, 360) * Weighter + (1-Weighter) * (heading - initHeading);
 }
 
   
@@ -1284,6 +1294,20 @@ void loop() {
     //direction stuff:
 
 
+    // if we are at same position and its not goal. start timer
+    // if timer eclipses 3000 milliseconds random walk
+    // 
+    if (((ourTempLastX == ourCurrX) &&  (ourTempLastY == ourCurrY)) && !((ourCurrX == goalX) && (ourCurrY == goalY))){
+      //enterRandomWalk = millis();
+    }
+    else{   
+      enterRandomWalk = millis();
+    }
+    if ((millis() - enterRandomWalk) > 3000 && !randomWalk){
+      exitRandomWalk = millis();
+      randomWalk = true;
+    }
+      
     
 
     //ourCurrX, ourCurrY are our grid positions (shorts)
@@ -1322,7 +1346,6 @@ void loop() {
     gridToPos(ourCurrX, ourCurrY, gridCenterX, gridCenterY);
     
     if ((goalX > ourCurrX) && (abs(newYCombo - gridCenterY) < .15)){
-      
       desiredYaw = 90;
       motorsOff = false;
     }
@@ -1341,6 +1364,22 @@ void loop() {
     else if ((goalX == ourCurrX) && goalY == ourCurrY) {
       motorsOff = true;
     }
+    if (randomWalk){
+      Serial.println("RANDOM WALK");
+      motorsOff = true;
+      if ((millis() - exitRandomWalk) > 2500){
+        motorsOff = false;
+        randomWalk = false;
+      }
+      moveMotors(180, false, 180, false);
+     /* else if ((millis() - exitRandomWalk) <1000){
+        moveMotors(180, false, 180, false);
+      }
+      else if ((millis() - exitRandomWalk) < 2000){
+        moveMotors(175, true, 175, false);
+      }
+      */
+    }
     //motorsOff = true;
     
     //imu stuff:
@@ -1354,26 +1393,39 @@ void loop() {
     double yaw = calcYaw();
     double rightMotorSpeed;
     double leftMotorSpeed;
+    bool forwards = true;
     // NEED TO DO THIS WITH THE 360 wrap around thing
-    if (desiredYaw > 360){
-      desiredYaw = fmod(desiredYaw, 360);
-    }
+    yaw = fmod(desiredYaw, 360);
+    desiredYaw = fmod(desiredYaw, 360);
     double diff = yaw - desiredYaw;
-    if (diff > 180){
+    /*if (diff > 180){
       diff = diff - 360;
     }
     else if (diff < -180){
 
     diff = 360 - abs(diff);
+    }*/
+    if(diff <= 90.0 || diff >= 270.0){
+      forwards = true;
+    }
+    else {
+      forwards = false;
+      diff -= 180;
     }
     yawITerm += diff;
     double realDiff = diff;
     if (abs(realDiff) >25){
       slight = false;
     }
-    if(slight){    
-      rightMotorSpeed = NEUTRAL_POWER + (diff * slightkP) + (extremekI * yawITerm);
-      leftMotorSpeed = NEUTRAL_POWER - (diff * slightkP) - (extremekI * yawITerm);
+    if(slight){
+     if (forwards){
+        rightMotorSpeed = NEUTRAL_POWER + (diff * slightkP) + (extremekI * yawITerm);
+        leftMotorSpeed = NEUTRAL_POWER - (diff * slightkP) - (extremekI * yawITerm);
+      }
+      else{
+        rightMotorSpeed = NEUTRAL_POWER - (diff * slightkP) + (extremekI * yawITerm);
+        leftMotorSpeed = NEUTRAL_POWER + (diff * slightkP) - (extremekI * yawITerm);
+      }
     
       if (leftMotorSpeed > 255){
         leftMotorSpeed = 255;
@@ -1388,13 +1440,24 @@ void loop() {
         rightMotorSpeed = 0;
       }
     if (!motorsOff){
+      if (forwards){
       moveMotors(leftMotorSpeed, true, rightMotorSpeed, true);
+      }
+      else{
+        
+      moveMotors(leftMotorSpeed, false, rightMotorSpeed, false);
+      }
     }
     }
-    else if (abs(realDiff) > 1){
-      
-      rightMotorSpeed = EXTREME_NEUTRAL_POWER + (abs(realDiff) * extremekP) + (extremekI * yawITerm);;
-      leftMotorSpeed = EXTREME_NEUTRAL_POWER + (abs(realDiff) * extremekP) - (extremekI * yawITerm);;
+    else if (abs(realDiff) > 3.0){
+      if(forwards){
+      rightMotorSpeed = EXTREME_NEUTRAL_POWER + (abs(realDiff) * extremekP) + (extremekI * yawITerm);
+      leftMotorSpeed = EXTREME_NEUTRAL_POWER + (abs(realDiff) * extremekP) - (extremekI * yawITerm);
+      }
+      else {
+      rightMotorSpeed = EXTREME_NEUTRAL_POWER + (abs(realDiff) * extremekP) - (extremekI * yawITerm);
+      leftMotorSpeed = EXTREME_NEUTRAL_POWER + (abs(realDiff) * extremekP) + (extremekI * yawITerm);
+      }
       if (leftMotorSpeed > 255){
         leftMotorSpeed = 255;
       }
@@ -1410,13 +1473,23 @@ void loop() {
       // if we turn left:
       if (realDiff > 0){
         if (!motorsOff){
+          if (forwards){
           moveMotors(leftMotorSpeed, false, rightMotorSpeed, true);   
+          }
+          else{
+             moveMotors(leftMotorSpeed, true, rightMotorSpeed, false);   
+          }
         }    
       }
       // if we go right tho
       else{
         if (!motorsOff){
+          if (forwards){
          moveMotors(leftMotorSpeed, true, rightMotorSpeed, false); 
+          }
+          else{
+             moveMotors(leftMotorSpeed, false, rightMotorSpeed, true);   
+          }
         }
        }
     }
