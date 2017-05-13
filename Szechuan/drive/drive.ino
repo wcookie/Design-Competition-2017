@@ -526,7 +526,11 @@ void loop() {
       else if (rightMotorSpeed < 0){
         rightMotorSpeed = 0;
       }
-    moveMotors(leftMotorSpeed, true, rightMotorSpeed, true);
+      //3.6 x 4.2 y
+      //4.2 x -5.6 y
+      // -5.9x -6.2 y
+      //- 6x 3.8 y
+   // moveMotors(leftMotorSpeed, true, rightMotorSpeed, true);
     }
     else if (abs(diff) > 1){
       
@@ -546,11 +550,11 @@ void loop() {
       }
       // if we turn left:
       if (diff > 0){
-        moveMotors(leftMotorSpeed, false, rightMotorSpeed, true);       
+      //  moveMotors(leftMotorSpeed, false, rightMotorSpeed, true);       
       }
       // if we go right tho
       else{
-        moveMotors(leftMotorSpeed, true, rightMotorSpeed, false); 
+    //    moveMotors(leftMotorSpeed, true, rightMotorSpeed, false); 
       }
     }
     else{
@@ -558,7 +562,7 @@ void loop() {
     }
    
     //print stuff
-    
+    /*
     Serial.print("Xfilt1: \t");
     Serial.print(xFilt1);
     Serial.print("\t");
@@ -598,7 +602,11 @@ void loop() {
     Serial.print("Right motor power: \t");
     Serial.print(rightMotorSpeed);
     Serial.print("\r\n");
- 
+ */
+    Serial.print("Xcombo: \t");
+    Serial.println(newXCombo);
+    Serial.print("Ycombo: \t");
+    Serial.println(newYCombo); 
    
 
 }
