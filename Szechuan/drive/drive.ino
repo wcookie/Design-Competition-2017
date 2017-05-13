@@ -47,6 +47,10 @@ typedef struct {
   int collected;
 } viveSensor;
 
+typedef struct {
+  double x;
+  double y;
+}enemy;
 
 volatile viveSensor V1;
 volatile viveSensor V2;
@@ -55,12 +59,15 @@ unsigned long prevTime = 0;
 unsigned long prevTime2 = 0;
 unsigned long prevTime3 = 0;
 unsigned long lastYawTime = 0;
+unsigned long lastEnemyTime = 0;
 int state = 0;
 double xCombo = 0, yCombo = 0;
 double xOld1 = 0, yOld1 = 0, xFilt1 = 0, yFilt1 = 0;
-double enemyX, enemyY;
 double xOld2 = 0, yOld2 = 0, xFilt2 = 0, yFilt2 = 0;
 double xOld3 = 0, yOld3 = 0, xFilt3 = 0, yFilt3 = 0;
+double enemyX, enemyY;
+enemy enemyArr[10];
+char enemyIndex = 0;
 double desiredYaw =0 ;
 short ourLastX;
 short ourLastY;
@@ -107,6 +114,7 @@ bool slight = true;
 //Setup the serial for the xbee
 void xbeeSetup(){
   Serial1.begin(9600);
+  lastEnemyTime = millis();
 }
 
 //setup the light to digital sensor(s?)
@@ -226,12 +234,13 @@ double calcYaw(){
 
 void getEnemyPosition(){  
   
-
+    double tempX;
+    double tempY;
    if (Serial1.available() > 0) {
    msg[msg_index] = Serial1.read();
    //Serial.print(msg[msg_index]);
    if (msg[msg_index] == '\n') {
-     sscanf(msg, "%lf %lf", &enemyX, &enemyY);  
+     sscanf(msg, "%lf %lf", &tempX, &tempY);  
      msg_index = 0;
    }
    else {
@@ -240,7 +249,31 @@ void getEnemyPosition(){
        msg_index = 0;
      }
    }
+   enemy tempE;
+   tempE.x = tempX;
+   tempE.y = tempY;
+   if(abs(tempX - enemyX) < 1.5 || abs(tempY - enemyY) < 1.5 || ((millis() - lastEnemyTime) > 100)){
+     enemyArr[enemyIndex] = tempE;
+     ++enemyIndex;
+     if(enemyIndex > 9){
+      enemyIndex = 0;
+     }
+   }
+  
+    double summx = 0;
+    double summy = 0;
+    short numEnemies = 0;
+    for(short i = 0; i < 10; ++i){
+      if (enemyArr[i].x > - 100 && enemyArr[i].y > -100){
+        summx += enemyArr[i].x;
+        summx += enemyArr[i].y;
+        ++numEnemies;
+    }
+   }
+   enemyX = .7 * summx / numEnemies + .3 * tempX;
+   enemyY = .7 * summy / numEnemies + .3 * tempY;
  }
+ 
 
 }
 
