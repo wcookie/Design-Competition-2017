@@ -30,11 +30,13 @@ LSM9DS1 imu;
 #define V3PIN 2
 #define DEG_PER_US 0.0216 // (180 deg) / (8333 us)
 #define LIGHTHOUSEHEIGHT 6.0
-#define NEUTRALPOWER 150
+#define NEUTRAL_POWER 150
+#define EXTREME_NEUTRAL_POWER 150
 #define DISTANCE_WEIGHT 5.0
 #define EYESIGHT_WEIGHT 10.0
 #define WALL_WEIGHT 1.0
-#define kP 2
+#define slightkP .4
+#define extremekP .8
 typedef struct {
   unsigned long changeTime[11];
   int prevPulse;
@@ -51,6 +53,7 @@ volatile viveSensor V3;
 unsigned long prevTime = 0;
 unsigned long prevTime2 = 0;
 unsigned long prevTime3 = 0;
+unsigned long lastYawTime = 0;
 int state = 0;
 double xCombo = 0, yCombo = 0;
 double xOld1 = 0, yOld1 = 0, xFilt1 = 0, yFilt1 = 0;
@@ -68,7 +71,9 @@ short theirCurrX;
 short theirCurrY;
 char msg[100];
 char msg_index = 0;
-
+double gyroYaw = 0;
+double accelYaw = 0;
+double complementaryYaw = 0;
 // Four corner positions.  
 //Back left is 0,0.  
 //Back right is 0, 8.
@@ -93,6 +98,8 @@ int frontRightA = 23;
 int frontRightD = 17;
 int backRightA = 21;
 int backRightD = 15;
+
+bool slight = true;
 
 //Setup the serial for the xbee
 void xbeeSetup(){
@@ -153,6 +160,7 @@ void imuSetup()
   }
   imu.calibrate(true);
   imu.calibrateMag(true);
+  lastYawTime = micros();
 }
 
 void imuReadVals(){
@@ -180,6 +188,7 @@ void imuReadVals(){
   }
 }
 
+
 double calcYaw(){
  double heading;
  double mx, my;
@@ -202,6 +211,7 @@ double calcYaw(){
   heading *= 180.0 / PI;
   return heading;
 }
+
 
 void getEnemyPosition(){  
   
@@ -391,7 +401,8 @@ void setup(){
   xbeeSetup();
   ltdSetup();
   imuSetup();
-  desiredYaw = calcYaw() + 50;
+  
+  desiredYaw = calcYaw() + 90;
 }
 
 
@@ -401,28 +412,7 @@ void loop() {
   // call stuff in here
   // also if the directions are wrong, you can switch which wire goes to which out pin from the 
   // h bridge for that motor
-   /* moveMotors(175, false, 175, false);
-    delay(1100);
-    moveMotors(125, true, 125, false );
-    delay(1000);
-    moveMotors(175, false, 175, false);
-    delay(1000);
-    moveMotors(125, false, 125, true);
-    delay(1000);
-    */
-   // moveMotors(150, true, 150, true);
-    //delay(1000);
-  /*  moveMotors(255, true, 255, false);
-    delay(2000);
-    moveMotors(255, false, 255, true);
-    delay(2000);
-    */
-    
-    //moveMotors(255, false, 255, false);
-    
-   // delay(2000);
-    //moveMotors(255, true, 255, true);
-    //delay(2000);
+
     if (micros() - prevTime > 1000000 / 25) {
     if (V1.useMe == 1) {
       prevTime = micros();
@@ -471,29 +461,87 @@ void loop() {
     posToGrid(ourCurrX, ourCurrY, newXCombo, newYCombo);
     //imu stuff:
     imuReadVals();
-    double yaw = calcYaw();
+    // get yaw
+    double gyroZ = imu.calcGyro(imu.gz);
+    unsigned long tempTime= micros();
+    gyroYaw += gyroZ * (tempTime - lastYawTime) * .000001;
+    lastYawTime = tempTime;
+ /*   Serial.print("Gyro z: \t");
+    Serial.println(gyroZ);
+    Serial.print("total gyroZ: \t");
+    Serial.println(gyroYaw);
+    Serial.print("Accel z: \t");
+    Serial.println(accelZ);
+    Serial.print("total Accel: \t");
+    Serial.println(accelYaw);
+    Serial.print("copmlmenetary Yaw: \t");
+    Serial.println(complementaryYaw);
+    */
+    double yaw = fmod(gyroYaw, 360);
+    double rightMotorSpeed;
+    double leftMotorSpeed;
     // NEED TO DO THIS WITH THE 360 wrap around thing
+    if (desiredYaw > 360){
+      desiredYaw = fmod(desiredYaw, 360);
+    }
     double diff = yaw - desiredYaw;
-    double rightMotorSpeed = NEUTRALPOWER + (diff * kP);
-    double leftMotorSpeed = NEUTRALPOWER - (diff * kP);
-    if (leftMotorSpeed > 255){
-      leftMotorSpeed = 255;
+    if (diff > 180){
+      diff = diff - 360;
     }
-    else if (leftMotorSpeed < 0){
-      leftMotorSpeed = 0;
-    }
-    if (rightMotorSpeed > 255){
-      rightMotorSpeed = 255;
-    }
-    else if (rightMotorSpeed < 0){
-      rightMotorSpeed = 0;
-    }
-    moveMotors(leftMotorSpeed, true, rightMotorSpeed, true);
+    else if (diff < -180){
 
+    diff = 360 - abs(diff);
+    }
+    
+    slight = false;
+    if(slight){    
+      rightMotorSpeed = NEUTRAL_POWER + (diff * slightkP);
+      leftMotorSpeed = NEUTRAL_POWER - (diff * slightkP);
+    
+      if (leftMotorSpeed > 255){
+        leftMotorSpeed = 255;
+      }
+      else if (leftMotorSpeed < 0){
+        leftMotorSpeed = 0;
+      }
+      if (rightMotorSpeed > 255){
+        rightMotorSpeed = 255;
+      }
+      else if (rightMotorSpeed < 0){
+        rightMotorSpeed = 0;
+      }
+    moveMotors(leftMotorSpeed, true, rightMotorSpeed, true);
+    }
+    else{
+      rightMotorSpeed = EXTREME_NEUTRAL_POWER + (abs(diff) * extremekP);
+      leftMotorSpeed = EXTREME_NEUTRAL_POWER + (abs(diff) * extremekP);
+      if (leftMotorSpeed > 255){
+        leftMotorSpeed = 255;
+      }
+      else if (leftMotorSpeed < 0){
+        leftMotorSpeed = 0;
+      }
+      if (rightMotorSpeed > 255){
+        rightMotorSpeed = 255;
+      }
+      else if (rightMotorSpeed < 0){
+        rightMotorSpeed = 0;
+      }
+      // if we turn left:
+      if (diff > 0){
+        moveMotors(leftMotorSpeed, false, rightMotorSpeed, true);       
+      }
+      // if we go right tho
+      else{
+        moveMotors(leftMotorSpeed, true, rightMotorSpeed, false); 
+      }
+    }
     
     
-    getEnemyPosition();
+     getEnemyPosition();
+ 
     //print stuff
+    
     Serial.print("Xfilt1: \t");
     Serial.print(xFilt1);
     Serial.print("\t");
@@ -518,10 +566,21 @@ void loop() {
     Serial.print("Enemy yPos: \t");
     Serial.print(enemyY);
     Serial.print("\r\n");
+    
     Serial.print("Yaw: \t");
     Serial.print(yaw);
     Serial.print("\r\n");
+    Serial.print("Desired yaw \t");
+    Serial.print(desiredYaw);
+    Serial.print("\r\n");
+    Serial.print("LEft Power: \t");
+    Serial.print(leftMotorSpeed);
+    Serial.print("\r\n");
+    Serial.print("Right motor power: \t");
+    Serial.print(rightMotorSpeed);
+    Serial.print("\r\n");
  
+   
 
 }
 void ISRV1() {
