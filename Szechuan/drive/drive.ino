@@ -569,6 +569,7 @@ double yawITerm = 0;
 double initHeading = 0;
 double lastHeading = 0;
 double gyroTotal = 0;
+double gyroDPSOff = 0;
 bool motorsOff = false;
 // Four corner positions.  
 //Back left is 0,0.  
@@ -694,14 +695,31 @@ void imuSetup()
   imu.calibrate(true);
   imu.calibrateMag(true);
   lastYawTime = micros();
+  //gyroDPSOff;
+  unsigned long gyroTimeStart = micros();
+  /*double gyroDPSSum = 0;
+  //double gyroZStart = imu.calcGyro(imu.gz);
+  for (int i =0; i< 50; ++i){
+    gyroDPSSum += imu.calcGyro(imu.gz);
+    delay(1);
+  }*/
+ // double gyroZStart = gyroDPSSum / 50;
   double headingSum = 0;
-  for (int i =0; i < 100; ++i){
+  for (int i =0; i < 400; ++i){
     calcYaw();
     headingSum += lastHeading;
-    delay(10);
+    delay(5);
   }
-  initHeading = headingSum / 100.0;
-  gyroOffset = gyroTotal / 100.0;
+  initHeading = headingSum / 400.0;
+  gyroOffset = gyroTotal / 400.0;
+ /* double gyroDPSSum2 = 0;
+  for (int i =0; i< 50; ++i){
+    gyroDPSSum2 += imu.calcGyro(imu.gz);
+    delay(1);
+  }*/
+  //double gyroZEnd = gyroDPSSum2 / 50;
+  unsigned long gyroTimeDiff = micros() - gyroTimeStart;
+  //gyroDPSOff = (gyroZEnd - gyroZStart) / (gyroTimeDiff * .000001);
   gyroYaw = 0.0;
   calibGyro = false;
   
@@ -812,10 +830,10 @@ double calcYaw(){
     gyroTotal += gyroZ;
   }
   unsigned long tempTime= micros();
-  gyroYaw += (gyroZ - gyroOffset) * (tempTime - lastYawTime) * .000001;
+  gyroYaw += (gyroZ - gyroOffset) * (tempTime - lastYawTime) * .000001; //- ((tempTime - lastYawTime) * .000001 * gyroDPSOff);
   lastYawTime = tempTime;
   lastHeading = heading;
-  return fmod(gyroYaw, 360) * .9 + .1 * (heading - initHeading);
+  return fmod(gyroYaw, 360) * .85 + .15 * (heading - initHeading);
 }
 
   
@@ -1426,7 +1444,7 @@ void loop() {
     Serial.print("Yfilt3: \t");
     Serial.print(yFilt3);
     Serial.print("\r\n");
-    /*
+    
     Serial.print("Enemy xPos: \t");
     Serial.print(enemyX);
     Serial.print("\t");
@@ -1448,7 +1466,7 @@ void loop() {
     Serial.print("Right motor power: \t");
     Serial.print(rightMotorSpeed);
     Serial.print("\r\n");
- */
+ 
     Serial.print("Xcombo: \t");
     Serial.println(newXCombo);
     Serial.print("Ycombo: \t");
