@@ -152,6 +152,12 @@ void ltdSetup(){
   lastFilt1Time = millis();
   lastFilt2Time = millis();
   lastFilt3Time = millis();
+  lightPoint initPoint;
+  initPoint.x = -1999;
+  initPoint.y = -1999;
+  for (short i = 0; i < 30; ++i){
+    filterPosArr[i] = initPoint;
+  }
 }
 
 
@@ -266,7 +272,7 @@ void getEnemyPosition(){
     for(short i = 0; i < 10; ++i){
       if (enemyArr[i].x > - 100 && enemyArr[i].y > -100){
         summx += enemyArr[i].x;
-        summx += enemyArr[i].y;
+        summy += enemyArr[i].y;
         ++numEnemies;
     }
    }
@@ -278,9 +284,15 @@ void getEnemyPosition(){
      }
    }
    else{
-    enemyX = summx / numEnemies;
-    enemyY = summy / numEnemies;
-    return;
+    if (numEnemies > 0){
+      enemyX = summx / numEnemies;
+      enemyY = summy / numEnemies;
+      return;
+    }
+    else{
+      enemyX = 0.0;
+      enemyY = 0.0;
+    }
    }
   
  
@@ -413,28 +425,33 @@ void findPosition(double &xOld, double &yOld, double &xFilt, double &yFilt, shor
       double summx = 0;
       double summy = 0;
       double numPoints = 0;
-      for (short tempIndex2 = (num * 10); tempIndex < (num + 1) * 10; ++tempIndex2){
+      for (short tempIndex2 = (num * 10); tempIndex2 < (num + 1) * 10; ++tempIndex2){
         if (filterPosArr[tempIndex2].x > - 100 && filterPosArr[tempIndex2].y > -100){
           summx += filterPosArr[tempIndex2].x;
-          summx += filterPosArr[tempIndex2].y;
+          summy += filterPosArr[tempIndex2].y;
           ++numPoints;
           }
       }
       lightPoint tempPoint;
       tempPoint.x = xPos;
       tempPoint.y = yPos;
+      double xavg;
+      double yavg;
       filterPosArr[num * 10 + tempIndex] = tempPoint;
-      double xavg = summx / numPoints;
-      double yavg = summy / numPoints;
-     
-        if (numPoints > 0 ){
-          xFilt = .7 * xavg + .3 * xPos;
-          yFilt = .7 * yavg + .3 * yPos;
-        }
-        else{
-          xFilt = xPos;
-          yFilt = yPos;
-        }
+       if (numPoints > 0 ){
+        xavg = summx / numPoints;
+        yavg = summy / numPoints;
+       }
+       else{
+        xFilt = xPos;
+        yFilt = yPos;
+        return;
+       }
+       
+       xFilt = .7 * xavg + .3 * xPos;
+       yFilt = .7 * yavg + .3 * yPos;
+        
+        
       
 
      /* xFilt = xOld * 0.5 + xPos * 0.5;
