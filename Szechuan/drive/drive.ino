@@ -740,6 +740,7 @@ void findPosition(double &xOld, double &yOld, double &xFilt, double &yFilt, shor
       /*Serial.print("Num: \t");
       Serial.print(num);
       Serial.print("\r\n");*/
+      
       if (num == 1){
         V1.useMe = 0;
         xPos = tan((V1.vertAng - 90.0) * DEG_TO_RAD) * LIGHTHOUSEHEIGHT;
@@ -762,8 +763,21 @@ void findPosition(double &xOld, double &yOld, double &xFilt, double &yFilt, shor
        //yPos = tan((V4.horzAng - 90.0) * DEG_TO_RAD) * LIGHTHOUSEHEIGHT; 
       }
 
- 
-
+// 
+//double xInit1 = -6.2;
+//double xInit2 = -5.9;
+//double xMax1 = 3.6;
+//double xMax2 = 4.2;
+//double yInit1 = -6.2;
+//double yInit2 = -5.6;
+//double yMax1 = 4.2;
+//double yMax2 = 3.8;
+      if ((xFilt > (xMax2 + 1.5) ) || (xFilt < (xInit1 - 1.5))){
+       return;
+      }
+      if ((yFilt > (yMax1 + 1.5)) || (yFilt < (yInit1 - 1.5))){
+        return;
+      }
       xFilt = xOld * 0.5 + xPos * 0.5;
       yFilt = yOld * 0.5 + yPos * 0.5;
 
@@ -805,9 +819,39 @@ double calcYaw(){
 }
 
   
-
-
 void getEnemyPosition(){  
+  
+   double tempX;
+   double tempY;
+   if (Serial3.available() > 0) {
+   msg[msg_index] = Serial3.read();
+   //Serial.print(msg[msg_index]);
+   if (msg[msg_index] == '\n') {
+     sscanf(msg, "%lf %lf", &tempX, &tempY);  
+     msg_index = 0;
+   }
+   else {
+     msg_index++;
+     if (msg_index == 100) {
+       msg_index = 0;
+     }
+   }
+  if ((tempX > (xMax2 + 1.5) ) || (tempX < (xInit1 - 1.5))){
+   return;
+  }
+  if ((tempY > (yMax1 + 1.5)) || (tempY < (yInit1 - 1.5))){
+    return;
+  }
+  enemyX = tempX;
+  enemyY = tempY;
+ }
+
+}
+
+
+
+      
+void getEnemyPosition1(){  
   
     double tempX;
     double tempY;
@@ -1164,10 +1208,11 @@ void loop() {
  
 
     //calc average from lighthouse
-    double xSum = xFilt3 + xFilt2 + xFilt1;
-    double newXCombo = xSum / 3.0;
-    double newYCombo = (double)(yFilt3 + yFilt2 + yFilt1) / 3.0;
-
+    //double xSum = xFilt3 + xFilt2 + xFilt1;
+   // double newXCombo = xSum / 3.0;
+   // double newYCombo = (double)(yFilt3 + yFilt2 + yFilt1) / 3.0;
+      double newXCombo = (xFilt2 + xFilt1) / 2.0;
+      double newYCombo = (yFilt2 + yFilt1) / 3.0;
     // eliminate outliers
     // :GENERAL STRAT:
     // calculate how far new x is away from last xcombo.  
@@ -1278,7 +1323,7 @@ void loop() {
     else if ((goalX == ourCurrX) && goalY == ourCurrY) {
       motorsOff = true;
     }
-    motorsOff = true;
+    //motorsOff = true;
     
     //imu stuff:
    // imuReadVals();
