@@ -374,7 +374,7 @@ void findPosition(double &xOld, double &yOld, double &xFilt, double &yFilt, shor
         V1.useMe = 0;
         xPos = tan((V1.vertAng - 90.0) * DEG_TO_RAD) * LIGHTHOUSEHEIGHT;
         yPos = tan((V1.horzAng - 90.0) * DEG_TO_RAD) * LIGHTHOUSEHEIGHT;
-       if(abs(xPos - xFilt1) < 1.5 || abs(yPos - yFilt1) < 1.5 || ((millis() - lastFilt1Time) > 100)){
+       if(abs(xPos - xFilt1) < 1.5 || abs(yPos - yFilt1) < 1.5 || ((millis() - lastFilt1Time) > 50)){
          tempIndex = filter1PosIndex;
          ++filter1PosIndex;
          if (filter1PosIndex > 9){
@@ -383,14 +383,15 @@ void findPosition(double &xOld, double &yOld, double &xFilt, double &yFilt, shor
          lastFilt1Time = millis();
        }
        else{
-        return;
+        xPos = xFilt1;
+        yPos = yFilt1;
        }
       }
       else if (num == 2){
         V2.useMe = 0;
         xPos = tan((V2.vertAng - 90.0) * DEG_TO_RAD) * LIGHTHOUSEHEIGHT;
         yPos = tan((V2.horzAng - 90.0) * DEG_TO_RAD) * LIGHTHOUSEHEIGHT; 
-        if(abs(xPos - xFilt2) < 1.5 || abs(yPos - yFilt2) < 1.5 || ((millis() - lastFilt2Time) > 100)){
+        if(abs(xPos - xFilt2) < 1.5 || abs(yPos - yFilt2) < 1.5 || ((millis() - lastFilt2Time) > 50)){
          tempIndex = filter2PosIndex;
          ++filter2PosIndex;
          if (filter2PosIndex > 9){
@@ -399,14 +400,15 @@ void findPosition(double &xOld, double &yOld, double &xFilt, double &yFilt, shor
          lastFilt2Time = millis();
        }
        else{
-        return;
+        xPos = xFilt2;
+        yPos = yFilt2;
        }
       }
       else if (num == 3){
         V3.useMe = 0;
         xPos = tan((V3.vertAng - 90.0) * DEG_TO_RAD) * LIGHTHOUSEHEIGHT;
         yPos = tan((V3.horzAng - 90.0) * DEG_TO_RAD) * LIGHTHOUSEHEIGHT; 
-        if(abs(xPos - xFilt3) < 1.5 || abs(yPos - yFilt3) < 1.5 || ((millis() - lastFilt3Time) > 100)){
+        if(abs(xPos - xFilt3) < 1.5 || abs(yPos - yFilt3) < 1.5 || ((millis() - lastFilt3Time) > 50)){
          tempIndex = filter3PosIndex;
          ++filter3PosIndex;
          if (filter3PosIndex > 9){
@@ -415,7 +417,8 @@ void findPosition(double &xOld, double &yOld, double &xFilt, double &yFilt, shor
          lastFilt3Time = millis();
        }
        else{
-        return;
+        xPos = xFilt3;
+        yPos = yFilt3;
        }
       }
       //set to 0 for array indexing.
