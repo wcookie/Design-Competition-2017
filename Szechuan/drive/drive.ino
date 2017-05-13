@@ -579,6 +579,14 @@ bool motorsOff = false;
 //4.2 x -5.6 y
 // -5.9x -6.2 y
 //- 6x 3.8 y
+
+
+//4.01, -5.39
+// -5.93,  -6.09
+// -5.95, 3.76
+//3.6 4.0
+// Old values:
+
 double xInit1 = -6.2;
 double xInit2 = -5.9;
 double xMax1 = 3.6;
@@ -588,6 +596,17 @@ double yInit2 = -5.6;
 double yMax1 = 4.2;
 double yMax2 = 3.8;
 
+//new:
+/*
+double xInit1 = -5.9;
+double xInit2 = -6.01;
+double xMax1 = 4.20;
+double xMax2 = 3.61;
+double yInit1 = -6.21;
+double yInit2 = -5.62;
+double yMax1 = 4.11;
+double yMax2 = 3.8;
+*/
 //these pin #s were chosen randomly.  These are for h bridge stuff,
 // make sure the A pins are actually PWM pins from teensy lc pinout
 // Make sure that the d pins are preferably normal pins that don't have anlaog in
@@ -729,6 +748,7 @@ void findPosition(double &xOld, double &yOld, double &xFilt, double &yFilt, shor
         yPos = tan((V2.horzAng - 90.0) * DEG_TO_RAD) * LIGHTHOUSEHEIGHT; 
       }
       else if (num == 3){
+        Serial.println("IN 3");
         V3.useMe = 0;
         xPos = tan((V3.vertAng - 90.0) * DEG_TO_RAD) * LIGHTHOUSEHEIGHT;
         yPos = tan((V3.horzAng - 90.0) * DEG_TO_RAD) * LIGHTHOUSEHEIGHT; 
@@ -879,8 +899,8 @@ void gridToPos(short xCoord, short yCoord, double &xExact, double &yExact){
   double xInitAvg = (xInit1 + xInit2) / 2.0;
   double yMaxAvg = (yMax2 + yMax1) / 2.0;
   double yInitAvg = (yInit1 + yInit2) / 2.0;
-  double closeToX = double(xCoord) / 8.0;
-  double closeToY = double(yCoord) / 8.0;
+  double closeToX = (double(xCoord) + .5) / 9.0;
+  double closeToY = (double(yCoord) +.5) / 9.0;
   double xMax = closeToY * (xMax2 - xMax1) + xMax1;
   double yMax = closeToX * (yMax2 - yMax1) + yMax1;
   double xInit = closeToY * (xInit2 - xInit1) + xInit1;
@@ -1131,7 +1151,7 @@ void loop() {
     if (micros() - prevTime2 > 1000000 / 25){
     if (V3.useMe == 1){
       prevTime3 = micros();
-      findPosition(xOld3, yOld3, xFilt3, yFilt3, 2);
+      findPosition(xOld3, yOld3, xFilt3, yFilt3, 3);
     }
     }
    
@@ -1141,12 +1161,9 @@ void loop() {
  
 
     //calc average from lighthouse
-    double newXCombo = (xFilt3 + xFilt2 + xFilt1) / 3.0;
-    double newYCombo = (yFilt3 + yFilt2 + yFilt1) / 3.0;
-
-    
-
-
+    double xSum = xFilt3 + xFilt2 + xFilt1;
+    double newXCombo = xSum / 3.0;
+    double newYCombo = (double)(yFilt3 + yFilt2 + yFilt1) / 3.0;
 
     // eliminate outliers
     // :GENERAL STRAT:
@@ -1332,7 +1349,7 @@ void loop() {
     }
    
     //print stuff
-    /*
+    
     Serial.print("Xfilt1: \t");
     Serial.print(xFilt1);
     Serial.print("\t");
@@ -1346,19 +1363,19 @@ void loop() {
     Serial.print(yFilt2);
     Serial.print("\r\n");  
     Serial.print("Xfilt3: \t");
-    Serial.print(xFilt2);
+    Serial.print(xFilt3);
     Serial.print("\t");
     Serial.print("Yfilt3: \t");
-    Serial.print(yFilt2);
+    Serial.print(yFilt3);
     Serial.print("\r\n");
-    
+    /*
     Serial.print("Enemy xPos: \t");
     Serial.print(enemyX);
     Serial.print("\t");
     Serial.print("Enemy yPos: \t");
     Serial.print(enemyY);
     Serial.print("\r\n");
-    */
+    
     Serial.print("Yaw: \t");
     Serial.print(yaw);
     Serial.print("\r\n");
@@ -1373,7 +1390,7 @@ void loop() {
     Serial.print("Right motor power: \t");
     Serial.print(rightMotorSpeed);
     Serial.print("\r\n");
- 
+ */
     Serial.print("Xcombo: \t");
     Serial.println(newXCombo);
     Serial.print("Ycombo: \t");
@@ -1382,10 +1399,7 @@ void loop() {
     Serial.println(ourCurrX);
     Serial.print("Y grid \t");
     Serial.println(ourCurrY);
-    Serial.print("Xcombo: \t");
-    Serial.println(newXCombo);
-    Serial.print("Ycombo: \t");
-    Serial.println(newYCombo); 
+    
     Serial.print("Theri X \t");
     Serial.println(theirCurrX);
     Serial.print("Their Y \t");
