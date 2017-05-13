@@ -24,13 +24,13 @@ struct point {
   int ypos;
 };
 
-point* prevArray[YROW][XROW];
-point* vertexArray[YROW][XROW];
-
+point prevArray[YROW][XROW];
+point vertexArray[YROW][XROW];
+point PATHMATRIX[625][2];
 
 typedef struct {
     int priority;
-    point* vertex;
+    point vertex;
 } node_t;
  
 typedef struct {
@@ -39,8 +39,7 @@ typedef struct {
     int size;
 } heap_t;
 
-
-void pushHeap (heap_t *h, int priority, point* vertex) {
+void pushHeap (heap_t *h, int priority, point vertex) {
     if (h->len + 1 >= h->size) {
         h->size = h->size ? h->size * 2 : 4;
         h->nodes = (node_t *)realloc(h->nodes, h->size * sizeof (node_t));
@@ -53,14 +52,15 @@ void pushHeap (heap_t *h, int priority, point* vertex) {
         j = j / 2;
     }
     h->nodes[i].priority = priority;
-    h->nodes[i].vertex = vertex;
+    h->nodes[i].vertex.xpos = vertex.xpos;
+    h->nodes[i].vertex.ypos = vertex.ypos;
     h->len++;
 }
 
-void decrease_priority(heap_t *h, int priority, point* vertex){
+void decrease_priority(heap_t *h, int priority, point vertex){
    int found = -1;
    for (int i = 1; i < h->len; i++) {
-        if (h->nodes[i].vertex->xpos == vertex->xpos && h->nodes[i].vertex->ypos == vertex->ypos)
+        if (h->nodes[i].vertex.xpos == vertex.xpos && h->nodes[i].vertex.ypos == vertex.ypos)
           found = i;
     }
     if (found != -1){
@@ -74,20 +74,21 @@ void decrease_priority(heap_t *h, int priority, point* vertex){
 }
 
 void freeHeap(heap_t *h){
-   for (int i = 0; i < h->len; i++){
-    point * v = h->nodes[i].vertex;
-    delete v;
-   }   
+//   for (int i = 0; i < h->len; i++){
+//    point * v = h->nodes[i].vertex;
+//    delete v;
+//   }   
    free(h->nodes);
-   free(h);
+   delete h;
 }
 
-point* popHeap (heap_t *h) {
+point popHeap (heap_t *h) {
     int i, j, k;
     if (!h->len) {
-        return NULL;
+        point emptyPoint = {-2, -2};
+        return emptyPoint;
     }
-    point* vertex = h->nodes[1].vertex;
+    point vertex = h->nodes[1].vertex;
     h->nodes[1] = h->nodes[h->len];
     h->len--;
     i = 1;
@@ -161,7 +162,7 @@ bool isValid(int row, int col)
            !(row%2 == 1 && col%2 == 1);
 }
 
-StackArray<point> findBestPath(int distanceArray[][XROW], point* prevArray[][XROW], point target){
+StackArray<point> findBestPath(point target){
 
    for (int h = 0; h < YROW; h++)
     {
@@ -169,7 +170,7 @@ StackArray<point> findBestPath(int distanceArray[][XROW], point* prevArray[][XRO
       {
 //        if (h == src.ypos && w == src.xpos) Serial.print("X");
         if (!(h%2 == 1 && w%2 == 1)){
-          sprintf(buffer, "(%d, %d)", prevArray[h][w]->xpos, prevArray[h][w]->ypos);
+          sprintf(buffer, "(%d, %d)", prevArray[h][w].xpos, prevArray[h][w].ypos);
           Serial.print (buffer);
         }
         else Serial.print("NA");
@@ -201,7 +202,7 @@ StackArray<point> findBestPath(int distanceArray[][XROW], point* prevArray[][XRO
 
     StackArray<point> path;
     
-    if (prevArray[tempy][tempx]->xpos == -1){
+    if (prevArray[tempy][tempx].xpos == -1){
       point src = {tempx, tempy};
       path.push(src);
     }
@@ -212,16 +213,16 @@ StackArray<point> findBestPath(int distanceArray[][XROW], point* prevArray[][XRO
     Serial.print (buffer);
 
     int tx; 
-    while (prevArray[tempy][tempx]->xpos != -1){
-      sprintf(buffer, "Node x: %d and Node y: %d\n", prevArray[tempy][tempx]->xpos, prevArray[tempy][tempx]->ypos);
+    while (prevArray[tempy][tempx].xpos != -1){
+      sprintf(buffer, "Node x: %d and Node y: %d\n", prevArray[tempy][tempx].xpos, prevArray[tempy][tempx].ypos);
       Serial.print (buffer);
       
       point p = {tempx, tempy};
       path.push(p);
       
       tx = tempx;
-      tempx = prevArray[tempy][tempx]->xpos;
-      tempy = prevArray[tempy][tx]->ypos;
+      tempx = prevArray[tempy][tempx].xpos;
+      tempy = prevArray[tempy][tx].ypos;
     }
 
    return path;
@@ -231,69 +232,33 @@ StackArray<point> findBestPath(int distanceArray[][XROW], point* prevArray[][XRO
 //Djikstras currently returns min cost of path from src
 StackArray<point> djikstra(int **cost, point src, point target)
 {
-
-    Serial.print("\nBEFORE DJIKSTRA: ");
-    Serial.print(freeMemory());
-    Serial.print("\n");
   
     Serial.print ("\nInside Finding Min Cost Path\n");
     sprintf(buffer, "Current x: %d and Current y: %d\n", src.xpos, src.ypos);
     Serial.print (buffer);
-//    sprintf(buffer, "Target x: %d and Target y: %d\n", dest.xpos, dest.ypos);
-  //  Serial.print (buffer);
 
-    Serial.print("Creating Priority Queue\n");
     heap_t* Q = new heap_t();
 
-    Serial.print("\nfree ram after Prio Queue: ");
-    Serial.print(freeMemory());
-    Serial.print("\n");
-
-//    int **distanceArray = (int **) malloc(sizeof(int *) * YROW); 
-//    for(int i = 0; i < YROW ; i++){
-//       distanceArray[i] = (int*) malloc(sizeof(int)* XROW);     
-//    }
-
-//    point **prevArray = (point **) malloc(sizeof(point *) * YROW); 
-//    for(int i = 0; i < YROW ; i++){
-//       prevArray[i] = (point*) malloc(sizeof(point)* XROW);     
-//    }
-    Serial.print("\nBEFORE NEW POINT: ");
-    Serial.print(freeMemory());
-    Serial.print("\n");
     for (int k = 0; k < YROW; k++){
      for (int l = 0; l < XROW; l++){
         if (!(k%2 == 1 && l%2 == 1)){
-//          point tempPoint = {l, k};
-
           if (k == src.ypos && l == src.xpos){
             distanceArray[k][l] = 0;
-            prevArray[k][l]->xpos = -1;
-            prevArray[k][l]->ypos = -1;
+            prevArray[k][l].xpos = -1;
+            prevArray[k][l].ypos = -1;
           }
           else {
             distanceArray[k][l] = 1000;
-            prevArray[k][l]->xpos = l;
-            prevArray[k][l]->ypos = k;
+            prevArray[k][l].xpos = l;
+            prevArray[k][l].ypos = k;
           }
-          point* tempPoint = new point();
-
-          tempPoint->xpos = l;
-          tempPoint->ypos = k;
-          
+            point tempPoint = {l, k};
           pushHeap(Q, distanceArray[k][l], tempPoint);
         }
         else distanceArray[k][l] = -1;
       }
     }
-    Serial.print("\nAFTER NEW POINT: ");
-    Serial.print(freeMemory());
-    Serial.print("\n");
 
-
-//    Serial.print("\nfree ram after Array declaration: ");
-//    Serial.print(freeMemory());
-//    Serial.print("\n");
     
     int rowNum[] = {-1, 0, 0, 1};
     int colNum[] = {0, -1, 1, 0};
@@ -301,13 +266,12 @@ StackArray<point> djikstra(int **cost, point src, point target)
     // Do a BFS starting from source cell
     while (Q->len > 0)
     {
-        point* u = popHeap(Q);
-//        point pt = curr->pt;
-     
+        point u = popHeap(Q);
+            
         for (int i = 0; i < 4; i++)
         {
-            int row = u->ypos + rowNum[i];
-            int col = u->xpos + colNum[i];
+            int row = u.ypos + rowNum[i];
+            int col = u.xpos + colNum[i];
 
             // if adjacent cell is valid, has path and
             // not visited yet, enqueue it.
@@ -316,44 +280,23 @@ StackArray<point> djikstra(int **cost, point src, point target)
 //              int distToUs = abs(row-src.ypos)+abs(col-src.xpos);
 //              visited[row][col] = (int)((curr->dist + cost[row][col])/distToUs) + distToUs;
 
-                int alt = distanceArray[u->ypos][u->xpos] + cost[row][col];
+                int alt = distanceArray[u.ypos][u.xpos] + cost[row][col];
                 
                 if (alt < distanceArray[row][col]){
                   distanceArray[row][col] = alt;
                   prevArray[row][col] = u;
-                  point* v = new point();
-                  v->xpos = col;
-                  v->ypos = row;
+                    point v = {col, row};
                   decrease_priority(Q, alt, v);
                 }
                 
             }
         }
-//        delete u;
     }
 
-
-    Serial.print("\nbefore free Heap: ");
-    Serial.print(freeMemory());
-    Serial.print("\n");
     freeHeap(Q);
-    Serial.print("\nAfter free heap: ");
-    Serial.print(freeMemory());
-    Serial.print("\n");
-
-
-
     
-    StackArray<point> path = findBestPath(distanceArray, prevArray, target);
-    
-//    for(int i = 0; i < YROW; i++){
-//      int* currentIntPtr = distanceArray[i];
-//      free(currentIntPtr);
-//    } 
-//    free(distanceArray);
-
-
-    
+    StackArray<point> path = findBestPath(target);
+        
     return path;
 }
 
@@ -443,9 +386,8 @@ StackArray<point> calcCostMatrix(point robotPos, point enemyPos){
 
     }
   }
-  Serial.print("Pre print \r\n");
   printCostMatrix(costMatrix, robotPos, enemyPos);
-  Serial.print("PRe djikstra \r\n");
+  
   StackArray<point> path = djikstra(costMatrix, robotPos, target);
   Serial.print("DJIKSTRA DONE \r\n");
 
@@ -454,14 +396,12 @@ StackArray<point> calcCostMatrix(point robotPos, point enemyPos){
     free(currentIntPtr);
   }
   free(costMatrix);
-  Serial.print("LEAVING: \r\n");
-  Serial.print(freeMemory());
   return path;
 }
 
-int getIndex(point src, point target){
-  if(isEven(src) && isEven(target)){
-    return ((src.xpos/2) + 5 * ((src.ypos/2) + 5 * ((target.xpos/2) + 5 * (target.ypos/2))));
+int getIndex(point src, point enemy){
+  if(isEven(src) && isEven(enemy)){
+    return ((src.xpos/2) + 5 * ((src.ypos/2) + 5 * ((enemy.xpos/2) + 5 * (enemy.ypos/2))));
   }
   else {
     Serial.print("\nInvalid points - not Even\n");
@@ -470,7 +410,7 @@ int getIndex(point src, point target){
 }
 
 void preCalculateMatrix(){
-  point* PATHMATRIX[625][2];
+  initDistancePrevArrays();
     
   int index;
 //  point enemyLoc, pos;
@@ -481,36 +421,31 @@ void preCalculateMatrix(){
           Serial.print("\nCalculating Matrix\n");
           sprintf(buffer, "currentLoc xpos: %d ; currentLoc ypos: %d\n", j, i);
           Serial.print (buffer);
-        sprintf(buffer, "currentEnemyLocation xpos: %d ; currentEnemyLocation ypos: %d\n", l, k);
+          sprintf(buffer, "currentEnemyLocation xpos: %d ; currentEnemyLocation ypos: %d\n", l, k);
           Serial.print (buffer);
-//          Serial.print(freeRam());
-          Serial.print("freeMemory()=");
-          Serial.println(freeMemory());
-//    
+
           point pos = {j, i};
           point enemyLoc = {l, k};
           index = getIndex(pos, enemyLoc);
-          Serial.print("before calcCost \r\n");
+          Serial.print("\nBefore CalcCost \r\n");
           StackArray<point> path = calcCostMatrix(pos, enemyLoc); //Use calcCostMatrix to get Path that should be taken (list of points)
-           Serial.print("AFTER: \r\n");
+          Serial.print("AFTER: \r\n");
           point top = path.pop();
           sprintf(buffer, "Top xpos: %d ; Top ypos: %d\n", top.xpos, top.ypos);
           Serial.print (buffer);
-          PATHMATRIX[index][0] = &top;
+          PATHMATRIX[index][0] = top;
     
           ///Has another direction to Go
           if (!path.isEmpty()){
             point secondtop = path.pop();
             sprintf(buffer, "secondtop xpos: %d ; secondtop ypos: %d\n", secondtop.xpos, secondtop.ypos);
             Serial.print (buffer);
-            PATHMATRIX[index][1] = &secondtop;        
+            PATHMATRIX[index][1] = secondtop;        
           }
           else {  //IS already At best direction
-            PATHMATRIX[index][1] = &top;
+            PATHMATRIX[index][1] = top;
           }
         }
-//        memset(buffer, 0, sizeof buffer);
-
       }
     }
   }
@@ -521,10 +456,9 @@ void initDistancePrevArrays(){
      for (int l = 0; l < XROW; l++){
         if (!(k%2 == 1 && l%2 == 1)){
             distanceArray[k][l] = 1000;
-            prevArray[k][l] = new point();
-            vertexArray[k][l] = new point();          
-            vertexArray[k][l]->xpos = l;
-            vertexArray[k][l]->ypos = k;
+            point tempPoint = {l, k};
+            prevArray[k][l] = tempPoint;
+            vertexArray[k][l] = tempPoint;
         }
         else {
             distanceArray[k][l] = -1;
@@ -536,16 +470,16 @@ void initDistancePrevArrays(){
 void setup() {
   // put your setup code here, to run once:
     Serial.begin(9600);
-  
-//  calcCostMatrix(currentLoc, currentEnemyLoc); //Use calcCostMatrix to get Path that should be taken (list of points)
-
-    initDistancePrevArrays();
-    preCalculateMatrix();
-
    
-//  Serial.print("\nGetting Index: \n");
-//  int index = getIndex(currentLoc, currentEnemyLoc);
-//  Serial.print(index, DEC);
+    preCalculateMatrix();
+    
+    Serial.println("TESTING PATH");
+    point robottest = {2, 4};
+    point enemytest = {2, 2};
+    int index = getIndex(robottest, enemytest);
+
+    sprintf(buffer, "PATH TO TAKE:  ( %d, %d) , (%d, %d) \n", PATHMATRIX[index][0].xpos, PATHMATRIX[index][0].ypos, PATHMATRIX[index][1].xpos, PATHMATRIX[index][1].ypos);
+    Serial.print (buffer);
 
 }
 
@@ -553,8 +487,5 @@ void loop() {
   // put your main code here, to run repeatedly:
 
 }
-
-
-//    Flat[x + WIDTH * (y + DEPTH * (z + TIME * t ))] = Original[x, y, z, t]
 
 
