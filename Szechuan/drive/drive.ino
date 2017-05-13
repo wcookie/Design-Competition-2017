@@ -222,6 +222,42 @@ void imuReadVals(){
 }
 
 
+
+void findPosition(double &xOld, double &yOld, double &xFilt, double &yFilt, short num){
+      double xPos = 0;
+      double yPos = 0;
+      /*Serial.print("Num: \t");
+      Serial.print(num);
+      Serial.print("\r\n");*/
+      if (num == 1){
+        V1.useMe = 0;
+        xPos = tan((V1.vertAng - 90.0) * DEG_TO_RAD) * LIGHTHOUSEHEIGHT;
+        yPos = tan((V1.horzAng - 90.0) * DEG_TO_RAD) * LIGHTHOUSEHEIGHT;
+      }
+      else if (num == 2){
+        V2.useMe = 0;
+        xPos = tan((V2.vertAng - 90.0) * DEG_TO_RAD) * LIGHTHOUSEHEIGHT;
+        yPos = tan((V2.horzAng - 90.0) * DEG_TO_RAD) * LIGHTHOUSEHEIGHT; 
+      }
+      else if (num == 3){
+        V3.useMe = 0;
+        xPos = tan((V3.vertAng - 90.0) * DEG_TO_RAD) * LIGHTHOUSEHEIGHT;
+        yPos = tan((V3.horzAng - 90.0) * DEG_TO_RAD) * LIGHTHOUSEHEIGHT; 
+      }
+      else if (num == 4){
+       //v4.useMe = 0;
+       //xPos = tan((V4.vertAng - 90.0) * DEG_TO_RAD) * LIGHTHOUSEHEIGHT;
+       //yPos = tan((V4.horzAng - 90.0) * DEG_TO_RAD) * LIGHTHOUSEHEIGHT; 
+      }
+
+ 
+
+      xFilt = xOld * 0.5 + xPos * 0.5;
+      yFilt = yOld * 0.5 + yPos * 0.5;
+
+      xOld = xFilt;
+      yOld = yFilt;
+}
 double calcYaw(){
  /*double heading;
  double mx, my;
@@ -383,7 +419,7 @@ void motorSetup() {
 
 
 
-void findPosition(double &xOld, double &yOld, double &xFilt, double &yFilt, short num){
+void findPosition1(double &xOld, double &yOld, double &xFilt, double &yFilt, short num){
       double xPos = 0;
       double yPos = 0;
       /*Serial.print("Num: \t");
