@@ -35,8 +35,9 @@ LSM9DS1 imu;
 #define DISTANCE_WEIGHT 5.0
 #define EYESIGHT_WEIGHT 10.0
 #define WALL_WEIGHT 1.0
-#define slightkP .4
+#define slightkP 2
 #define extremekP .8
+#define extremekI 0
 typedef struct {
   unsigned long changeTime[11];
   int prevPulse;
@@ -74,6 +75,8 @@ char msg_index = 0;
 double gyroYaw = 0;
 double accelYaw = 0;
 double complementaryYaw = 0;
+double yawITerm = 0;
+
 // Four corner positions.  
 //Back left is 0,0.  
 //Back right is 0, 8.
@@ -103,7 +106,7 @@ bool slight = true;
 
 //Setup the serial for the xbee
 void xbeeSetup(){
-  Serial3.begin(9600);
+  Serial1.begin(9600);
 }
 
 //setup the light to digital sensor(s?)
@@ -190,7 +193,7 @@ void imuReadVals(){
 
 
 double calcYaw(){
- double heading;
+ /*double heading;
  double mx, my;
  mx = imu.calcMag(imu.mx);
  my = imu.calcMag(imu.my);
@@ -209,15 +212,23 @@ double calcYaw(){
   
   // Convert everything from radians to degrees:
   heading *= 180.0 / PI;
-  return heading;
+  return heading;*/
+  imuReadVals();
+  double gyroZ = imu.calcGyro(imu.gz);
+  unsigned long tempTime= micros();
+  gyroYaw += gyroZ * (tempTime - lastYawTime) * .000001;
+  lastYawTime = tempTime;
+  return fmod(gyroYaw, 360);
 }
+
+  
 
 
 void getEnemyPosition(){  
   
 
-   if (Serial3.available() > 0) {
-   msg[msg_index] = Serial3.read();
+   if (Serial1.available() > 0) {
+   msg[msg_index] = Serial1.read();
    //Serial.print(msg[msg_index]);
    if (msg[msg_index] == '\n') {
      sscanf(msg, "%lf %lf", &enemyX, &enemyY);  
@@ -402,7 +413,7 @@ void setup(){
   ltdSetup();
   imuSetup();
   
-  desiredYaw = calcYaw() + 90;
+  desiredYaw = 90;
 }
 
 
@@ -432,7 +443,10 @@ void loop() {
     }
     }
    
-      
+       
+    
+     getEnemyPosition();
+ 
 
     //calc average from lighthouse
     double newXCombo = (xFilt3 + xFilt2 + xFilt1) / 3.0;
@@ -460,13 +474,13 @@ void loop() {
     ourLastY = ourCurrY;
     posToGrid(ourCurrX, ourCurrY, newXCombo, newYCombo);
     //imu stuff:
-    imuReadVals();
+   // imuReadVals();
     // get yaw
-    double gyroZ = imu.calcGyro(imu.gz);
+  /*  double gyroZ = imu.calcGyro(imu.gz);
     unsigned long tempTime= micros();
     gyroYaw += gyroZ * (tempTime - lastYawTime) * .000001;
     lastYawTime = tempTime;
- /*   Serial.print("Gyro z: \t");
+    Serial.print("Gyro z: \t");
     Serial.println(gyroZ);
     Serial.print("total gyroZ: \t");
     Serial.println(gyroYaw);
@@ -477,7 +491,7 @@ void loop() {
     Serial.print("copmlmenetary Yaw: \t");
     Serial.println(complementaryYaw);
     */
-    double yaw = fmod(gyroYaw, 360);
+    double yaw = calcYaw();
     double rightMotorSpeed;
     double leftMotorSpeed;
     // NEED TO DO THIS WITH THE 360 wrap around thing
@@ -492,11 +506,13 @@ void loop() {
 
     diff = 360 - abs(diff);
     }
-    
-    slight = false;
+    yawITerm += diff;
+    if (abs(diff) >25){
+      slight = false;
+    }
     if(slight){    
-      rightMotorSpeed = NEUTRAL_POWER + (diff * slightkP);
-      leftMotorSpeed = NEUTRAL_POWER - (diff * slightkP);
+      rightMotorSpeed = NEUTRAL_POWER + (diff * slightkP) + (extremekI * yawITerm);
+      leftMotorSpeed = NEUTRAL_POWER - (diff * slightkP) - (extremekI * yawITerm);
     
       if (leftMotorSpeed > 255){
         leftMotorSpeed = 255;
@@ -512,9 +528,10 @@ void loop() {
       }
     moveMotors(leftMotorSpeed, true, rightMotorSpeed, true);
     }
-    else{
-      rightMotorSpeed = EXTREME_NEUTRAL_POWER + (abs(diff) * extremekP);
-      leftMotorSpeed = EXTREME_NEUTRAL_POWER + (abs(diff) * extremekP);
+    else if (abs(diff) > 1){
+      
+      rightMotorSpeed = EXTREME_NEUTRAL_POWER + (abs(diff) * extremekP) + (extremekI * yawITerm);;
+      leftMotorSpeed = EXTREME_NEUTRAL_POWER + (abs(diff) * extremekP) - (extremekI * yawITerm);;
       if (leftMotorSpeed > 255){
         leftMotorSpeed = 255;
       }
@@ -536,10 +553,10 @@ void loop() {
         moveMotors(leftMotorSpeed, true, rightMotorSpeed, false); 
       }
     }
-    
-    
-     getEnemyPosition();
- 
+    else{
+      slight = true;
+    }
+   
     //print stuff
     
     Serial.print("Xfilt1: \t");
@@ -572,6 +589,8 @@ void loop() {
     Serial.print("\r\n");
     Serial.print("Desired yaw \t");
     Serial.print(desiredYaw);
+    Serial.print("\r\n");
+    Serial.print(diff);
     Serial.print("\r\n");
     Serial.print("LEft Power: \t");
     Serial.print(leftMotorSpeed);
