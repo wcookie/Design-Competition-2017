@@ -623,6 +623,9 @@ int backRightA = 21;
 int backRightD = 15; 
 bool slight = true;
 
+short discLastX = -1;
+short discLastY = -1;
+
 //Setup the serial for the xbee
 void xbeeSetup(){
   Serial1.begin(9600);
@@ -1184,7 +1187,7 @@ void loop() {
     short nextGoalX;
     short nextGoalY;
     // if its odd / in column
-
+    bool turn = false;
     short ourTempLastX = ourCurrX;
     short ourTempLastY = ourCurrY;
     short theirTempLastX = theirCurrX;
@@ -1215,9 +1218,11 @@ void loop() {
     bind(theirCurrY);
     bind(theirLastX);
     bind(theirLastY);
-    double gridCenterX;
-    double gridCenterY;
-    gridToPos(ourCurrX, ourCurrY, gridCenterX, gridCenterY);
+    //direction stuff:
+
+
+    
+
     //ourCurrX, ourCurrY are our grid positions (shorts)
     //theirCurrX, theirCurrY are their grid positions (shorts)
     //call your function, and give me (for now) goalX and goalY (as shorts) for grid positions
@@ -1239,31 +1244,38 @@ void loop() {
     else{
       index = getIndex((int)ourCurrX, (int)ourCurrY, (int)theirCurrX, (int)theirCurrY);
     }
-
+    short tempX = goalX;
+    short tempY = goalY;
     goalX = (short)PATHMATRIX[index][0].xpos;
     goalY = (short)PATHMATRIX[index][0].ypos;
     nextGoalX = (short)PATHMATRIX[index][1].xpos;
     nextGoalY = (short)PATHMATRIX[index][1].ypos;
 
+
     Serial.println("entered loop");
 
-    if (goalX > ourCurrX){
+    double gridCenterX;
+    double gridCenterY;
+    gridToPos(ourCurrX, ourCurrY, gridCenterX, gridCenterY);
+    
+    if ((goalX > ourCurrX) && (abs(newYCombo - gridCenterY) < .15)){
+      
       desiredYaw = 90;
       motorsOff = false;
     }
-    else if (goalX < ourCurrX){
+    else if ((goalX < ourCurrX) && (abs(newYCombo - gridCenterY) < .15)){
       desiredYaw = -90;
       motorsOff = false;
     }
-    else if (goalY > ourCurrY){
+    else if ((goalY > ourCurrY) && (abs(newXCombo - gridCenterX) < .15)){
       desiredYaw = 0;
       motorsOff = false;
     }
-    else if (goalY < ourCurrY){
+    else if ((goalY < ourCurrY) && (abs(newXCombo - gridCenterX < .15))){
       desiredYaw = 180;
       motorsOff = false;
     }
-    else {
+    else if ((goalX == ourCurrX) && goalY == ourCurrY) {
       motorsOff = true;
     }
     motorsOff = true;
@@ -1292,7 +1304,8 @@ void loop() {
     diff = 360 - abs(diff);
     }
     yawITerm += diff;
-    if (abs(diff) >25){
+    double realDiff = diff;
+    if (abs(realDiff) >25){
       slight = false;
     }
     if(slight){    
@@ -1315,10 +1328,10 @@ void loop() {
       moveMotors(leftMotorSpeed, true, rightMotorSpeed, true);
     }
     }
-    else if (abs(diff) > 1){
+    else if (abs(realDiff) > 1){
       
-      rightMotorSpeed = EXTREME_NEUTRAL_POWER + (abs(diff) * extremekP) + (extremekI * yawITerm);;
-      leftMotorSpeed = EXTREME_NEUTRAL_POWER + (abs(diff) * extremekP) - (extremekI * yawITerm);;
+      rightMotorSpeed = EXTREME_NEUTRAL_POWER + (abs(realDiff) * extremekP) + (extremekI * yawITerm);;
+      leftMotorSpeed = EXTREME_NEUTRAL_POWER + (abs(realDiff) * extremekP) - (extremekI * yawITerm);;
       if (leftMotorSpeed > 255){
         leftMotorSpeed = 255;
       }
@@ -1332,7 +1345,7 @@ void loop() {
         rightMotorSpeed = 0;
       }
       // if we turn left:
-      if (diff > 0){
+      if (realDiff > 0){
         if (!motorsOff){
           moveMotors(leftMotorSpeed, false, rightMotorSpeed, true);   
         }    
