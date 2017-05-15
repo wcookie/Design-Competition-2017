@@ -34,8 +34,8 @@ LSM9DS1 imu;
 #define LIGHTHOUSEHEIGHT 6.0
 #define NEUTRAL_POWER 150
 #define EXTREME_NEUTRAL_POWER 150
-#define slightkP 2
-#define extremekP .8
+#define slightkP .8
+#define extremekP .6
 #define extremekI 0
 #define NEW_DISTANCE_WEIGHT 5.0
 #define MY_DISTANCE_WEIGHT 1.5
@@ -43,7 +43,7 @@ LSM9DS1 imu;
 
 
 
-#define WALL_COST_WEIGHT 2 //Cost of being next to a Wall (Corners = 2 X WALL_COST_WEIGHT)
+#define WALL_COST_WEIGHT 1 //Cost of being next to a Wall (Corners = 2 X WALL_COST_WEIGHT)
 #define EYESIGHT_WEIGHT 2 //Cost of being potentially seen by Enemy
 #define ENEMY_PROXIMITY_WEIGHT 100 //COST put on being next to ennemy - decreases w/ Distance
 #define ENEMY_DISTANCE 6 //Distance after which enemy proximity cost is not felt
@@ -601,6 +601,8 @@ bool randomWalk = false;
 unsigned long enterRandomWalk;
 unsigned long exitRandomWalk;
 bool startRandomTimer = false;
+
+double zRateSum = 0.0;
 //new:
 /*
 double xInit1 = -5.9;
@@ -729,6 +731,8 @@ void imuSetup()
   
 }
 
+
+
 void imuReadVals(){
   // Update the sensor values whenever new data is available
   if ( imu.gyroAvailable() )
@@ -806,6 +810,7 @@ void findPosition(double &xOld, double &yOld, double &xFilt, double &yFilt, shor
       xOld = xFilt;
       yOld = yFilt;
 }
+
 double calcYaw(){
  imuReadVals();
  double heading;
@@ -834,7 +839,7 @@ double calcYaw(){
     gyroTotal += gyroZ;
   }
   unsigned long tempTime= micros();
-  gyroYaw += (gyroZ - gyroOffset) * (tempTime - lastYawTime) * .000001; //- ((tempTime - lastYawTime) * .000001 * gyroDPSOff);
+  //gyroYaw += (gyroZ - gyroOffset) * (tempTime - lastYawTime) * .000001; //- ((tempTime - lastYawTime) * .000001 * gyroDPSOff);
   lastYawTime = tempTime;
   lastHeading = heading;
   // DO HEADING STUFF WITH 180 degrees, and gyroYaw. gyroYaw is getting within 360 degrees.  
@@ -846,13 +851,17 @@ double calcYaw(){
   //return fmod(gyroYaw, 360) * Weighter + (1-Weighter) * (heading - initHeading);
 }
 
+double calcYaw2(double x2, double x1, double y2, double y1){
+  return atan2(x2-x1, y2-y1) * 180 / M_PI;
+}
+
   
 void getEnemyPosition(){  
   
    double tempX;
    double tempY;
-   if (Serial3.available() > 0) {
-   msg[msg_index] = Serial3.read();
+   if (Serial1.available() > 0) {
+   msg[msg_index] = Serial1.read();
    //Serial.print(msg[msg_index]);
    if (msg[msg_index] == '\n') {
      sscanf(msg, "%lf %lf", &tempX, &tempY);  
@@ -1198,7 +1207,7 @@ void setup(){
   Serial.println("enter precalc");
   preCalculateMatrix();
   Serial.println("Done calculating");
-  imuSetup();
+  //imuSetup();
   
 
   
@@ -1240,7 +1249,7 @@ void loop() {
    // double newXCombo = xSum / 3.0;
    // double newYCombo = (double)(yFilt3 + yFilt2 + yFilt1) / 3.0;
       double newXCombo = (xFilt2 + xFilt1) / 2.0;
-      double newYCombo = (yFilt2 + yFilt1) / 3.0;
+      double newYCombo = (yFilt2 + yFilt1) / 2.0;
     // eliminate outliers
     // :GENERAL STRAT:
     // calculate how far new x is away from last xcombo.  
@@ -1307,6 +1316,7 @@ void loop() {
       exitRandomWalk = millis();
       randomWalk = true;
     }
+    //randomWalk = false;
       
     
 
@@ -1390,14 +1400,18 @@ void loop() {
     gyroYaw += gyroZ * (tempTime - lastYawTime) * .000001;
     lastYawTime = tempTime;
  
-    double yaw = calcYaw();
+    //double yaw = calcYaw();
+    //double yaw = gyroYaw;
+    double yaw = calcYaw2(xFilt1, xFilt2, yFilt1, yFilt2);
+    Serial.println(yaw);
     double rightMotorSpeed;
     double leftMotorSpeed;
     bool forwards = true;
     // NEED TO DO THIS WITH THE 360 wrap around thing
-    yaw = fmod(desiredYaw, 360);
+    yaw = fmod(yaw, 360);
     desiredYaw = fmod(desiredYaw, 360);
     double diff = yaw - desiredYaw;
+    //diff = fmod(diff, 360);
     /*if (diff > 180){
       diff = diff - 360;
     }
@@ -1405,13 +1419,20 @@ void loop() {
 
     diff = 360 - abs(diff);
     }*/
-    if(diff <= 90.0 || diff >= 270.0){
+    if(diff <= 90.0 || fmod(diff, 360) >= 270.0){
+      if (fmod(diff, 360) >= 270.0){
+        diff = 360 - fmod(diff, 360);
+      }
       forwards = true;
     }
     else {
       forwards = false;
-      diff -= 180;
+      //diff -= 180;
+      diff = 180 - diff;
     }
+   /*( if (diff > 90){
+      diff = 360-diff;
+    }*/
     yawITerm += diff;
     double realDiff = diff;
     if (abs(realDiff) >25){
